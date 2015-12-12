@@ -1,0 +1,9 @@
+name: DeltaInventory
+main: com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin
+version: 1.0
+author: Trace Bachi (tracebachi@yahoo.com, BigBossZee)
+depend: [xAuth, DeltaEssentials]
+
+permissions:
+  DeltaInv.SingleInv:
+    description: Maintains a single inventory for all gamemodes.
