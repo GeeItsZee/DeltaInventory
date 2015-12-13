@@ -50,6 +50,7 @@ public class PlayerListener implements Listener
     private DeltaInventoryPlugin plugin;
     private DeltaEssentialsPlugin essentialsPlugin;
 
+    private HashSet<String> authenticatedPlayers = new HashSet<>(32);
     private HashSet<String> lockedPlayers = new HashSet<>(32);
     private HashMap<String, Integer> idMap = new HashMap<>(32);
 
@@ -92,6 +93,7 @@ public class PlayerListener implements Listener
             if(player != null && player.isOnline())
             {
                 String name = player.getName().toLowerCase();
+                authenticatedPlayers.add(name);
 
                 // Lock the inventory to prevent changes
                 lockedPlayers.add(name);
@@ -112,6 +114,7 @@ public class PlayerListener implements Listener
             if(player != null && player.isOnline())
             {
                 String name = player.getName().toLowerCase();
+                authenticatedPlayers.add(name);
 
                 // Lock the inventory to prevent changes
                 lockedPlayers.add(name);
@@ -128,6 +131,9 @@ public class PlayerListener implements Listener
     {
         Player player = event.getPlayer();
         String name = player.getName().toLowerCase();
+
+        if(!authenticatedPlayers.contains(name)) { return; }
+
         ServerChangeRequest request = serverChangeRequests.remove(name);
         long currentTime = System.currentTimeMillis();
 
@@ -147,6 +153,9 @@ public class PlayerListener implements Listener
 
         // Remove the lock if it exists
         lockedPlayers.remove(name);
+
+        // Unauthenticate
+        authenticatedPlayers.remove(name);
     }
 
     @EventHandler
@@ -238,6 +247,9 @@ public class PlayerListener implements Listener
     {
         Player player = event.getPlayer();
         String name = player.getName().toLowerCase();
+
+        if(!authenticatedPlayers.contains(name)) { return; }
+
         InventoryPair pair = inventoryMap.get(name);
         GameMode originalMode = player.getGameMode();
 
