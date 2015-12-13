@@ -23,6 +23,7 @@ import com.yahoo.tracebachi.DeltaInventory.InventoryUtils;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import org.bukkit.Bukkit;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -96,7 +97,7 @@ public class PlayerSaveInsert implements Runnable
                 }
             }
         }
-        catch(SQLException ex)
+        catch(SQLException | IOException ex)
         {
             ex.printStackTrace();
         }
@@ -130,7 +131,7 @@ public class PlayerSaveInsert implements Runnable
                 }
             }
         }
-        catch(SQLException ex)
+        catch(SQLException | IOException ex)
         {
             ex.printStackTrace();
         }

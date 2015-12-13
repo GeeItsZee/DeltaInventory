@@ -24,16 +24,21 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
 public interface InventoryUtils
 {
-    static byte[] serialize(PlayerEntry entry)
+    static byte[] serialize(PlayerEntry entry) throws IOException
     {
         Preconditions.checkNotNull(entry, "Entry cannot be null.");
         YamlConfiguration configuration = new YamlConfiguration();
@@ -86,17 +91,31 @@ public interface InventoryUtils
             }
         }
 
-        // TODO Zip bytes?
-        return configuration.saveToString().getBytes(StandardCharsets.UTF_8);
+        byte[] uncompBytes = configuration.saveToString().getBytes(StandardCharsets.UTF_8);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        GZIPOutputStream gzip = new GZIPOutputStream(bos);
+        gzip.write(uncompBytes);
+        gzip.close();
+        bos.close();
+        return bos.toByteArray();
     }
 
-    static Map<String, ItemStack[]> deserialize(byte[] bytes) throws InvalidConfigurationException
+    static Map<String, ItemStack[]> deserialize(byte[] compBytes) throws InvalidConfigurationException, IOException
     {
-        // TODO Unzip Bytes?
+        int nRead;
+        byte[] data = new byte[2048];
+        ByteArrayInputStream bis = new ByteArrayInputStream(compBytes);
+        GZIPInputStream gzip = new GZIPInputStream(bis);
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+        while((nRead = gzip.read(data, 0, data.length)) != -1)
+        {
+            buffer.write(data, 0, nRead);
+        }
 
         HashMap<String, ItemStack[]> map = new HashMap<>();
         YamlConfiguration configuration = new YamlConfiguration();
-        configuration.loadFromString(new String(bytes, StandardCharsets.UTF_8));
+        configuration.loadFromString(new String(buffer.toByteArray(), StandardCharsets.UTF_8));
 
         ConfigurationSection armorSection = configuration.getConfigurationSection("Armor");
         map.put("Armor", readInventorySection(armorSection, 4));

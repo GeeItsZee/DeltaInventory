@@ -26,6 +26,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.inventory.ItemStack;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -98,13 +99,19 @@ public class PlayerLoad implements Runnable
                 }
             }
         }
-        catch(SQLException | InvalidConfigurationException ex)
+        catch(SQLException | InvalidConfigurationException | IOException ex)
         {
             ex.printStackTrace();
+
+            NoInventoryFoundEvent event = new NoInventoryFoundEvent(name);
+
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                Bukkit.getPluginManager().callEvent(event);
+            });
         }
     }
 
-    private void handleResultSet(ResultSet resultSet) throws SQLException, InvalidConfigurationException
+    private void handleResultSet(ResultSet resultSet) throws SQLException, InvalidConfigurationException, IOException
     {
         if(resultSet.next())
         {
@@ -125,7 +132,7 @@ public class PlayerLoad implements Runnable
         }
     }
 
-    private PlayerEntry getEntryFromResultSet(ResultSet resultSet) throws SQLException, InvalidConfigurationException
+    private PlayerEntry getEntryFromResultSet(ResultSet resultSet) throws SQLException, InvalidConfigurationException, IOException
     {
         PlayerEntry entry = new PlayerEntry();
 
