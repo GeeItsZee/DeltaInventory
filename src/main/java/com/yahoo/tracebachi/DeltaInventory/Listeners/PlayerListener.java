@@ -23,6 +23,7 @@ import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
 import com.yahoo.tracebachi.DeltaInventory.Events.InventoryLoadEvent;
 import com.yahoo.tracebachi.DeltaInventory.Events.InventorySaveEvent;
 import com.yahoo.tracebachi.DeltaInventory.Events.NoInventoryFoundEvent;
+import com.yahoo.tracebachi.DeltaInventory.PotionEffectUtils;
 import com.yahoo.tracebachi.DeltaInventory.Storage.InventoryPair;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Storage.UnmodifiablePlayerEntry;
@@ -38,6 +39,7 @@ import org.bukkit.event.inventory.InventoryInteractEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.potion.PotionEffect;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -316,8 +318,10 @@ public class PlayerListener implements Listener
         entry.setId(idMap.get(player.getName().toLowerCase()));
         entry.setName(player.getName());
         entry.setHealth(player.getHealth());
+        entry.setFoodLevel(player.getFoodLevel());
         entry.setXpLevel(player.getLevel());
         entry.setXpProgress(player.getExp());
+        entry.setPotionEffects(PotionEffectUtils.serialize(player.getActivePotionEffects()));
 
         if(player.hasPermission("DeltaInv.SingleInv"))
         {
@@ -366,8 +370,15 @@ public class PlayerListener implements Listener
         String name = player.getName().toLowerCase();
 
         player.setHealth(entry.getHealth());
+        player.setFoodLevel(entry.getFoodLevel());
         player.setLevel(entry.getXpLevel());
         player.setExp(entry.getXpProgress());
+
+        // Apply the potion effects to the player
+        for(PotionEffect effect : PotionEffectUtils.deserialize(entry.getPotionEffects()))
+        {
+            effect.apply(player);
+        }
 
         if(entry.getArmor() != null)
         {

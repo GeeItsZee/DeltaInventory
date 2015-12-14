@@ -32,9 +32,11 @@ public class PlayerEntry implements UnmodifiablePlayerEntry
     private Integer id;
     private String name;
     private double health;
+    private int foodLevel;
     private int xpLevel;
     private float xpProgress;
     private int gameMode;
+    private String potionEffects;
     private ItemStack[] armor;
     private ItemStack[] survivalInventory;
     private ItemStack[] creativeInventory;
@@ -71,6 +73,16 @@ public class PlayerEntry implements UnmodifiablePlayerEntry
     public void setHealth(double health)
     {
         this.health = health;
+    }
+
+    public int getFoodLevel()
+    {
+        return foodLevel;
+    }
+
+    public void setFoodLevel(int foodLevel)
+    {
+        this.foodLevel = foodLevel;
     }
 
     @Override
@@ -124,6 +136,16 @@ public class PlayerEntry implements UnmodifiablePlayerEntry
                 this.gameMode = PlayerEntry.SPECTATOR;
                 break;
         }
+    }
+
+    public String getPotionEffects()
+    {
+        return potionEffects;
+    }
+
+    public void setPotionEffects(String potionEffects)
+    {
+        this.potionEffects = potionEffects;
     }
 
     @Override

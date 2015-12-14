@@ -39,13 +39,13 @@ import java.util.Map;
 public class PlayerLoad implements Runnable
 {
     private static final String SELECT_BY_NAME =
-        " SELECT id, name, health, xp_level, xp_progress, gamemode, items" +
+        " SELECT id, name, health, hunger, xp_level, xp_progress, gamemode, potion_effects, items" +
             " FROM DeltaInv" +
             " WHERE name=?" +
             " LIMIT 1;";
 
     private static final String SELECT_BY_ID =
-        " SELECT id, name, health, xp_level, xp_progress, gamemode, items" +
+        " SELECT id, name, health, hunger, xp_level, xp_progress, gamemode, potion_effects, items" +
             " FROM DeltaInv" +
             " WHERE id=?" +
             " LIMIT 1;";
@@ -139,9 +139,11 @@ public class PlayerLoad implements Runnable
         entry.setId(resultSet.getInt("id"));
         entry.setName(resultSet.getString("name"));
         entry.setHealth(resultSet.getDouble("health"));
+        entry.setFoodLevel(resultSet.getInt("hunger"));
         entry.setXpLevel(resultSet.getInt("xp_level"));
         entry.setXpProgress(resultSet.getFloat("xp_progress"));
         entry.setGameMode(resultSet.getInt("gamemode"));
+        entry.setPotionEffects(resultSet.getString("potion_effects"));
 
         byte[] itemBytes = resultSet.getBytes("items");
         Map<String, ItemStack[]> items = InventoryUtils.deserialize(itemBytes);

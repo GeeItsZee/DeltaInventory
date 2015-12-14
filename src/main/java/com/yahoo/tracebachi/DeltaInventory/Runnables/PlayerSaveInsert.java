@@ -36,13 +36,15 @@ public class PlayerSaveInsert implements Runnable
 {
     private static final String STATEMENT_TEXT =
         " INSERT INTO DeltaInv " +
-            " (name, health, xp_level, xp_progress, gamemode, items) " +
-            " VALUES (?, ?, ?, ?, ?, ?) " +
+            " (name, health, hunger, xp_level, xp_progress, gamemode, potion_effects, items) " +
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
         " ON DUPLICATE KEY UPDATE " +
             " health = VALUES(health), " +
+            " hunger = VALUES(hunger), " +
             " xp_level = VALUES(xp_level)," +
             " xp_progress = VALUES(xp_progress), " +
             " gamemode = VALUES(gamemode), " +
+            " potion_effects = VALUES(potion_effects), " +
             " items = VALUES(items);";
 
     private static final String GET_ID =
@@ -71,10 +73,12 @@ public class PlayerSaveInsert implements Runnable
 
                 statement.setString(1, entry.getName());
                 statement.setDouble(2, entry.getHealth());
-                statement.setInt(3, entry.getXpLevel());
-                statement.setFloat(4, entry.getXpProgress());
-                statement.setInt(5, entry.getGameMode());
-                statement.setBytes(6, serializedInv);
+                statement.setInt(3, entry.getFoodLevel());
+                statement.setInt(4, entry.getXpLevel());
+                statement.setFloat(5, entry.getXpProgress());
+                statement.setInt(6, entry.getGameMode());
+                statement.setString(7, entry.getPotionEffects());
+                statement.setBytes(8, serializedInv);
 
                 statement.executeUpdate();
             }
@@ -113,10 +117,12 @@ public class PlayerSaveInsert implements Runnable
 
                 statement.setString(1, entry.getName());
                 statement.setDouble(2, entry.getHealth());
-                statement.setInt(3, entry.getXpLevel());
-                statement.setFloat(4, entry.getXpProgress());
-                statement.setInt(5, entry.getGameMode());
-                statement.setBytes(6, serializedInv);
+                statement.setInt(3, entry.getFoodLevel());
+                statement.setInt(4, entry.getXpLevel());
+                statement.setFloat(5, entry.getXpProgress());
+                statement.setInt(6, entry.getGameMode());
+                statement.setString(7, entry.getPotionEffects());
+                statement.setBytes(8, serializedInv);
 
                 statement.executeUpdate();
             }

@@ -36,9 +36,11 @@ public class PlayerSaveUpdate implements Runnable
     private static final String STATEMENT_TEXT =
         " UPDATE DeltaInv SET " +
             " health = ?, " +
+            " hunger = ?, " +
             " xp_level = ?, " +
             " xp_progress = ?, " +
             " gamemode = ?, " +
+            " potion_effects = ?, " +
             " items = ?" +
         " WHERE id = ?;";
 
@@ -65,11 +67,13 @@ public class PlayerSaveUpdate implements Runnable
                 byte[] serializedInv = InventoryUtils.serialize(entry);
 
                 statement.setDouble(1, entry.getHealth());
-                statement.setInt(2, entry.getXpLevel());
-                statement.setFloat(3, entry.getXpProgress());
-                statement.setInt(4, entry.getGameMode());
-                statement.setBytes(5, serializedInv);
-                statement.setInt(6, entry.getId());
+                statement.setInt(2, entry.getFoodLevel());
+                statement.setInt(3, entry.getXpLevel());
+                statement.setFloat(4, entry.getXpProgress());
+                statement.setInt(5, entry.getGameMode());
+                statement.setString(6, entry.getPotionEffects());
+                statement.setBytes(7, serializedInv);
+                statement.setInt(8, entry.getId());
 
                 int changed = statement.executeUpdate();
                 if(changed >= 1)
@@ -97,11 +101,13 @@ public class PlayerSaveUpdate implements Runnable
                 byte[] serializedInv = InventoryUtils.serialize(entry);
 
                 statement.setDouble(1, entry.getHealth());
-                statement.setInt(2, entry.getXpLevel());
-                statement.setFloat(3, entry.getXpProgress());
-                statement.setInt(4, entry.getGameMode());
-                statement.setBytes(5, serializedInv);
-                statement.setInt(6, entry.getId());
+                statement.setInt(2, entry.getFoodLevel());
+                statement.setInt(3, entry.getXpLevel());
+                statement.setFloat(4, entry.getXpProgress());
+                statement.setInt(5, entry.getGameMode());
+                statement.setString(6, entry.getPotionEffects());
+                statement.setBytes(7, serializedInv);
+                statement.setInt(8, entry.getId());
 
                 statement.executeUpdate();
             }

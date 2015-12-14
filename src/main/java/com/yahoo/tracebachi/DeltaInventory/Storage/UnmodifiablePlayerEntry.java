@@ -29,11 +29,15 @@ public interface UnmodifiablePlayerEntry
 
     double getHealth();
 
+    int getFoodLevel();
+
     int getXpLevel();
 
     float getXpProgress();
 
     int getGameMode();
+
+    String getPotionEffects();
 
     ItemStack[] getArmor();
 

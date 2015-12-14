@@ -24,6 +24,7 @@ import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerSaveUpdate;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -43,10 +44,11 @@ public class DeltaInventoryPlugin extends JavaPlugin implements LoggablePlugin
         " id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY," +
         " name CHAR(32) NOT NULL UNIQUE KEY," +
         " health DOUBLE NOT NULL," +
+        " hunger INT NOT NULL," +
         " xp_level INT NOT NULL," +
         " xp_progress FLOAT NOT NULL," +
-            // TODO Add hunger, potion effects
         " gamemode TINYINT NOT NULL," +
+        " potion_effects VARCHAR(256) NOT NULL," +
         " lastupdate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
         " items BLOB" +
         " )";
