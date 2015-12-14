@@ -16,6 +16,7 @@
  */
 package com.yahoo.tracebachi.DeltaInventory.Storage;
 
+import org.bukkit.GameMode;
 import org.bukkit.inventory.ItemStack;
 
 /**
@@ -103,6 +104,26 @@ public class PlayerEntry implements UnmodifiablePlayerEntry
     public void setGameMode(int gameMode)
     {
         this.gameMode = gameMode;
+    }
+
+    public void setGameMode(GameMode gameMode)
+    {
+        switch(gameMode)
+        {
+            default:
+            case SURVIVAL:
+                this.gameMode = PlayerEntry.SURVIVAL;
+                break;
+            case CREATIVE:
+                this.gameMode = PlayerEntry.CREATIVE;
+                break;
+            case ADVENTURE:
+                this.gameMode = PlayerEntry.ADVENTURE;
+                break;
+            case SPECTATOR:
+                this.gameMode = PlayerEntry.SPECTATOR;
+                break;
+        }
     }
 
     @Override

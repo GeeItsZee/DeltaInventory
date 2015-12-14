@@ -154,7 +154,7 @@ public class PlayerListener implements Listener
         // Remove the lock if it exists
         lockedPlayers.remove(name);
 
-        // Unauthenticate
+        // Remove from authenticated
         authenticatedPlayers.remove(name);
     }
 
@@ -192,7 +192,7 @@ public class PlayerListener implements Listener
         {
             // Save the ID and remove the lock
             idMap.put(name, entry.getId());
-            plugin.debug("Loaded inventory for {name:" + name + ", id:" + entry.getId() + "}");
+            plugin.debug("Applying inventory for {name:" + name + ", id:" + entry.getId() + "}");
 
             // Load from entry
             copyFromEntry(player, entry);
@@ -253,9 +253,9 @@ public class PlayerListener implements Listener
         InventoryPair pair = inventoryMap.get(name);
         GameMode originalMode = player.getGameMode();
 
-        if(!player.hasPermission("DeltaInv.SingleInv"))
+        if(originalMode != event.getNewGameMode())
         {
-            if(originalMode != event.getNewGameMode())
+            if(!player.hasPermission("DeltaInv.SingleInv"))
             {
                 if(originalMode == GameMode.SURVIVAL)
                 {
@@ -319,28 +319,39 @@ public class PlayerListener implements Listener
         entry.setXpLevel(player.getLevel());
         entry.setXpProgress(player.getExp());
 
-        switch(player.getGameMode())
+        if(player.hasPermission("DeltaInv.SingleInv"))
         {
-            case SURVIVAL:
-                entry.setGameMode(PlayerEntry.SURVIVAL);
-                entry.setSurvivalInventory(player.getInventory().getContents());
-                entry.setCreativeInventory(pair.getCreative());
-                break;
-            case CREATIVE:
-                entry.setGameMode(PlayerEntry.CREATIVE);
-                entry.setCreativeInventory(player.getInventory().getContents());
-                entry.setSurvivalInventory(pair.getSurvival());
-                break;
-            case ADVENTURE:
-                entry.setGameMode(PlayerEntry.ADVENTURE);
-                entry.setSurvivalInventory(pair.getSurvival());
-                entry.setCreativeInventory(pair.getCreative());
-                break;
-            case SPECTATOR:
-                entry.setGameMode(PlayerEntry.SPECTATOR);
-                entry.setSurvivalInventory(pair.getSurvival());
-                entry.setCreativeInventory(pair.getCreative());
-                break;
+            // Single inventory players will get items saved in survival every time
+            entry.setGameMode(player.getGameMode());
+            entry.setSurvivalInventory(player.getInventory().getContents());
+            entry.setCreativeInventory(null);
+        }
+        else
+        {
+            // Save survival and creative according to current game mode
+            switch(player.getGameMode())
+            {
+                case SURVIVAL:
+                    entry.setGameMode(PlayerEntry.SURVIVAL);
+                    entry.setSurvivalInventory(player.getInventory().getContents());
+                    entry.setCreativeInventory(pair.getCreative());
+                    break;
+                case CREATIVE:
+                    entry.setGameMode(PlayerEntry.CREATIVE);
+                    entry.setCreativeInventory(player.getInventory().getContents());
+                    entry.setSurvivalInventory(pair.getSurvival());
+                    break;
+                case ADVENTURE:
+                    entry.setGameMode(PlayerEntry.ADVENTURE);
+                    entry.setSurvivalInventory(pair.getSurvival());
+                    entry.setCreativeInventory(pair.getCreative());
+                    break;
+                case SPECTATOR:
+                    entry.setGameMode(PlayerEntry.SPECTATOR);
+                    entry.setSurvivalInventory(pair.getSurvival());
+                    entry.setCreativeInventory(pair.getCreative());
+                    break;
+            }
         }
 
         entry.setArmor(player.getInventory().getArmorContents());
@@ -371,20 +382,30 @@ public class PlayerListener implements Listener
         pair.setCreative(entry.getCreativeInventory());
         inventoryMap.put(name, pair);
 
-        // Load the same inventory as the player's current game mode
-        switch(player.getGameMode())
+        if(player.hasPermission("DeltaInv.SingleInv"))
         {
-            case SURVIVAL:
-                player.getInventory().setContents(pair.getSurvival());
-                pair.setSurvival(null);
-                break;
-            case CREATIVE:
-                player.getInventory().setContents(pair.getCreative());
-                pair.setCreative(null);
-                break;
-            default:
-                player.getInventory().clear();
-                break;
+            // Single inventory players will get items loaded from survival every time
+            player.getInventory().setContents(pair.getSurvival());
+            pair.setSurvival(null);
+            pair.setCreative(null);
+        }
+        else
+        {
+            // Load the same inventory as the player's current game mode
+            switch(player.getGameMode())
+            {
+                case SURVIVAL:
+                    player.getInventory().setContents(pair.getSurvival());
+                    pair.setSurvival(null);
+                    break;
+                case CREATIVE:
+                    player.getInventory().setContents(pair.getCreative());
+                    pair.setCreative(null);
+                    break;
+                default:
+                    player.getInventory().clear();
+                    break;
+            }
         }
 
         // Switch the server to game mode they should be in

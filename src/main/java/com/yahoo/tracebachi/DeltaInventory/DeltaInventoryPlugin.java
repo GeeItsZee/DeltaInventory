@@ -45,6 +45,7 @@ public class DeltaInventoryPlugin extends JavaPlugin implements LoggablePlugin
         " health DOUBLE NOT NULL," +
         " xp_level INT NOT NULL," +
         " xp_progress FLOAT NOT NULL," +
+            // TODO Add hunger, potion effects
         " gamemode TINYINT NOT NULL," +
         " lastupdate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
         " items BLOB" +

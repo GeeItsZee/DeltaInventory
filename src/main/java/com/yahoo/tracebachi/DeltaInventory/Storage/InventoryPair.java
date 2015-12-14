@@ -36,6 +36,11 @@ public class InventoryPair
         this.survival = survival;
     }
 
+    public boolean hasSurvival()
+    {
+        return survival != null;
+    }
+
     public ItemStack[] getCreative()
     {
         return (creative == null) ? new ItemStack[36] : creative;
@@ -44,5 +49,10 @@ public class InventoryPair
     public void setCreative(ItemStack[] creative)
     {
         this.creative = creative;
+    }
+
+    public boolean hasCreative()
+    {
+        return creative != null;
     }
 }
