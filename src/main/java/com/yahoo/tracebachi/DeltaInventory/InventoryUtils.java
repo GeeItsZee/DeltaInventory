@@ -50,7 +50,14 @@ public interface InventoryUtils
             {
                 if(armor[i] != null && armor[i].getType() != Material.AIR)
                 {
-                    configuration.set("Armor." + i, armor[i]);
+                    try
+                    {
+                        configuration.set("Armor." + i, armor[i]);
+                    }
+                    catch(NullPointerException ex)
+                    {
+                        ex.printStackTrace();
+                    }
                 }
             }
         }
@@ -62,7 +69,14 @@ public interface InventoryUtils
             {
                 if(inv[i] != null && inv[i].getType() != Material.AIR)
                 {
-                    configuration.set("Survival." + i, inv[i]);
+                    try
+                    {
+                        configuration.set("Survival." + i, inv[i]);
+                    }
+                    catch(NullPointerException ex)
+                    {
+                        ex.printStackTrace();
+                    }
                 }
             }
         }
@@ -74,7 +88,14 @@ public interface InventoryUtils
             {
                 if(inv[i] != null && inv[i].getType() != Material.AIR)
                 {
-                    configuration.set("Creative." + i, inv[i]);
+                    try
+                    {
+                        configuration.set("Creative." + i, inv[i]);
+                    }
+                    catch(NullPointerException ex)
+                    {
+                        ex.printStackTrace();
+                    }
                 }
             }
         }
@@ -86,7 +107,14 @@ public interface InventoryUtils
             {
                 if(inv[i] != null && inv[i].getType() != Material.AIR)
                 {
-                    configuration.set("Ender." + i, inv[i]);
+                    try
+                    {
+                        configuration.set("Ender." + i, inv[i]);
+                    }
+                    catch(NullPointerException ex)
+                    {
+                        ex.printStackTrace();
+                    }
                 }
             }
         }

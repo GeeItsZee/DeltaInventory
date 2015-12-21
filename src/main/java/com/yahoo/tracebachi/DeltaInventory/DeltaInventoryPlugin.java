@@ -22,9 +22,7 @@ import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerLoad;
 import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerSaveInsert;
 import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerSaveUpdate;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
-import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -53,11 +51,7 @@ public class DeltaInventoryPlugin extends JavaPlugin implements LoggablePlugin
         " items BLOB" +
         " )";
 
-    private boolean debug;
-    private String dbUsername;
-    private String dbPassword;
-    private String dbUrl;
-
+    private boolean debugMode;
     private PlayerListener listener;
 
     @Override
@@ -74,23 +68,28 @@ public class DeltaInventoryPlugin extends JavaPlugin implements LoggablePlugin
     public void onEnable()
     {
         reloadConfig();
-        debug = getConfig().getBoolean("debug_mode", false);
-        dbUsername = getConfig().getString("Database.Username");
-        dbPassword = getConfig().getString("Database.Password");
-        getConfig().getItemStack("");
-        dbUrl = getConfig().getString("Database.URL");
+        debugMode = getConfig().getBoolean("DebugMode", false);
+        String databaseName = getConfig().getString("Database");
 
-        createDataSource();
-        if(!setupTable())
+        DeltaEssentialsPlugin dePlugin = (DeltaEssentialsPlugin) getServer().getPluginManager()
+            .getPlugin("DeltaEssentials");
+
+        dataSource = dePlugin.getDataSource(databaseName);
+        if(dataSource == null)
         {
-            severe("Failed to create inventory table! Shutting down.");
+            severe("The specified database does not exist! Shutting down ...");
+            getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
-        DeltaEssentialsPlugin essPlugin = (DeltaEssentialsPlugin) getServer().
-            getPluginManager().getPlugin("DeltaEssentials");
+        if(!setupTable())
+        {
+            severe("Failed to create inventory table! Shutting down ...");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
 
-        listener = new PlayerListener(this, essPlugin);
+        listener = new PlayerListener(this, dePlugin);
         getServer().getPluginManager().registerEvents(listener, this);
     }
 
@@ -103,7 +102,6 @@ public class DeltaInventoryPlugin extends JavaPlugin implements LoggablePlugin
             listener = null;
         }
 
-        dataSource.close();
         dataSource = null;
     }
 
@@ -122,7 +120,7 @@ public class DeltaInventoryPlugin extends JavaPlugin implements LoggablePlugin
     @Override
     public void debug(String message)
     {
-        if(debug)
+        if(debugMode)
         {
             getLogger().info("[Debug] " + message);
         }
@@ -165,26 +163,6 @@ public class DeltaInventoryPlugin extends JavaPlugin implements LoggablePlugin
         PlayerLoad runnable = new PlayerLoad(this, name, id);
         getServer().getScheduler().runTaskAsynchronously(this, runnable);
         debug("Loading inventory async for {name:" + name + ", id:" + id + "}" );
-    }
-
-    private void createDataSource()
-    {
-        HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:mysql://" + dbUrl);
-        config.setUsername(dbUsername);
-        config.setPassword(dbPassword);
-        config.addDataSourceProperty("cachePrepStmts", "true");
-        config.addDataSourceProperty("prepStmtCacheSize", "250");
-        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-        config.addDataSourceProperty("useServerPrepStmts", "true");
-
-        if(dataSource != null)
-        {
-            dataSource.close();
-        }
-        info("Creating DataSource ...");
-        dataSource = new HikariDataSource(config);
-        info("....................... Done");
     }
 
     private boolean setupTable()

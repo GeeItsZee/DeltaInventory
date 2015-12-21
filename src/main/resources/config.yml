@@ -1,13 +1,7 @@
 # DeltaInventory Configuration File
 
-# MySQL connection information
-Database:
-  # Username and password for connecting to the database.
-  Username: mc
-  Password: mc
-
-  # This should have three parts: the main URL, the port number, and database name.
-  URL: localhost:5432/mc18
+# DeltaEssentials Database name
+Database: Main
 
 # Debug Mode (for developers)
-debug_mode: False
+DebugMode: False
