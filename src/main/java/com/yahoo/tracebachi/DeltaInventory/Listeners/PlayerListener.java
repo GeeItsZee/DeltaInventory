@@ -69,13 +69,20 @@ public class PlayerListener implements Listener
     {
         for(Player player : Bukkit.getOnlinePlayers())
         {
-            String name = player.getName().toLowerCase();
-            InventoryPair pair = inventoryMap.get(name);
-            PlayerEntry entry = createPlayerEntry(player, pair);
+            try
+            {
+                String name = player.getName().toLowerCase();
+                InventoryPair pair = inventoryMap.get(name);
+                PlayerEntry entry = createPlayerEntry(player, pair);
 
-            serverChangeRequests.remove(name);
-
-            plugin.saveInventoryNow(entry);
+                serverChangeRequests.remove(name);
+                plugin.saveInventoryNow(entry);
+            }
+            catch(Exception ex)
+            {
+                plugin.severe("Failed to save inventory on shutdown for " + player.getName());
+                ex.printStackTrace();
+            }
         }
 
         this.plugin = null;

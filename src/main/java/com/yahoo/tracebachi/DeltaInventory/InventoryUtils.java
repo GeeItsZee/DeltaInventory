@@ -17,6 +17,7 @@
 package com.yahoo.tracebachi.DeltaInventory;
 
 import com.google.common.base.Preconditions;
+import com.yahoo.tracebachi.DeltaInventory.Exceptions.InventorySerializationException;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -50,14 +51,7 @@ public interface InventoryUtils
             {
                 if(armor[i] != null && armor[i].getType() != Material.AIR)
                 {
-                    try
-                    {
-                        configuration.set("Armor." + i, armor[i]);
-                    }
-                    catch(NullPointerException ex)
-                    {
-                        ex.printStackTrace();
-                    }
+                    configuration.set("Armor." + i, armor[i]);
                 }
             }
         }
@@ -69,14 +63,7 @@ public interface InventoryUtils
             {
                 if(inv[i] != null && inv[i].getType() != Material.AIR)
                 {
-                    try
-                    {
-                        configuration.set("Survival." + i, inv[i]);
-                    }
-                    catch(NullPointerException ex)
-                    {
-                        ex.printStackTrace();
-                    }
+                    configuration.set("Survival." + i, inv[i]);
                 }
             }
         }
@@ -88,14 +75,7 @@ public interface InventoryUtils
             {
                 if(inv[i] != null && inv[i].getType() != Material.AIR)
                 {
-                    try
-                    {
-                        configuration.set("Creative." + i, inv[i]);
-                    }
-                    catch(NullPointerException ex)
-                    {
-                        ex.printStackTrace();
-                    }
+                    configuration.set("Creative." + i, inv[i]);
                 }
             }
         }
@@ -107,25 +87,26 @@ public interface InventoryUtils
             {
                 if(inv[i] != null && inv[i].getType() != Material.AIR)
                 {
-                    try
-                    {
-                        configuration.set("Ender." + i, inv[i]);
-                    }
-                    catch(NullPointerException ex)
-                    {
-                        ex.printStackTrace();
-                    }
+                    configuration.set("Ender." + i, inv[i]);
                 }
             }
         }
 
-        byte[] uncompBytes = configuration.saveToString().getBytes(StandardCharsets.UTF_8);
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
-        GZIPOutputStream gzip = new GZIPOutputStream(bos);
-        gzip.write(uncompBytes);
-        gzip.close();
-        bos.close();
-        return bos.toByteArray();
+        try
+        {
+            byte[] uncompBytes = configuration.saveToString().getBytes(StandardCharsets.UTF_8);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            GZIPOutputStream gzip = new GZIPOutputStream(bos);
+
+            gzip.write(uncompBytes);
+            gzip.close();
+            bos.close();
+            return bos.toByteArray();
+        }
+        catch(NullPointerException ex)
+        {
+            throw new InventorySerializationException(ex);
+        }
     }
 
     static Map<String, ItemStack[]> deserialize(byte[] compBytes) throws InvalidConfigurationException, IOException

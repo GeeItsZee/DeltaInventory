@@ -33,7 +33,7 @@ import java.sql.Statement;
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/11/15.
  */
-public class DeltaInventoryPlugin extends JavaPlugin implements LoggablePlugin
+public class DeltaInventoryPlugin extends JavaPlugin
 {
     public static HikariDataSource dataSource;
 
@@ -105,19 +105,16 @@ public class DeltaInventoryPlugin extends JavaPlugin implements LoggablePlugin
         dataSource = null;
     }
 
-    @Override
     public void info(String message)
     {
         getLogger().info(message);
     }
 
-    @Override
     public void severe(String message)
     {
         getLogger().severe(message);
     }
 
-    @Override
     public void debug(String message)
     {
         if(debugMode)

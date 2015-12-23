@@ -19,9 +19,11 @@ package com.yahoo.tracebachi.DeltaInventory.Runnables;
 import com.google.common.base.Preconditions;
 import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
 import com.yahoo.tracebachi.DeltaInventory.Events.InventorySaveEvent;
+import com.yahoo.tracebachi.DeltaInventory.Exceptions.InventorySerializationException;
 import com.yahoo.tracebachi.DeltaInventory.InventoryUtils;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -89,6 +91,18 @@ public class PlayerSaveUpdate implements Runnable
         catch(SQLException | IOException ex)
         {
             ex.printStackTrace();
+        }
+        catch(InventorySerializationException ex)
+        {
+            Bukkit.getScheduler().runTask(plugin, () ->
+            {
+                Player player = Bukkit.getPlayer(entry.getName());
+                if(player != null && player.isOnline())
+                {
+                    player.sendMessage("Failed to serialize inventory! " +
+                        "Do you have any illegal items in your inventory?");
+                }
+            });
         }
     }
 
