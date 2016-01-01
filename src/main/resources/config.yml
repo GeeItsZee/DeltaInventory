@@ -3,5 +3,13 @@
 # DeltaEssentials Database name
 Database: Main
 
+# Forced Gamemode settings
+ForcedGameMode:
+  # Set to true to enable a forced gamemode.
+  # Add "DeltaInv.ForcedGameMode.Bypass" permission to bypass.
+  Enable: False
+  # Options include SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR
+  GameMode: SURVIVAL
+
 # Debug Mode (for developers)
 DebugMode: False

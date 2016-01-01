@@ -7,3 +7,5 @@ depend: [xAuth, DeltaEssentials]
 permissions:
   DeltaInv.SingleInv:
     description: Maintains a single inventory for all gamemodes.
+  DeltaInv.ForcedGameMode.Bypass:
+    description: Allows player to bypass forced gamemode restriction.

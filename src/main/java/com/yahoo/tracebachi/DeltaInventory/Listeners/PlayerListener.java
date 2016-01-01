@@ -18,7 +18,6 @@ package com.yahoo.tracebachi.DeltaInventory.Listeners;
 
 import com.yahoo.tracebachi.DeltaEssentials.DeltaEssentialsPlugin;
 import com.yahoo.tracebachi.DeltaEssentials.Events.PlayerServerSwitchEvent;
-import com.yahoo.tracebachi.DeltaEssentials.Prefixes;
 import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
 import com.yahoo.tracebachi.DeltaInventory.Events.InventoryLoadEvent;
 import com.yahoo.tracebachi.DeltaInventory.Events.InventorySaveEvent;
@@ -45,6 +44,8 @@ import org.bukkit.potion.PotionEffect;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import static com.yahoo.tracebachi.DeltaRedis.Spigot.Prefixes.*;
+
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
@@ -52,10 +53,12 @@ public class PlayerListener implements Listener
 {
     private DeltaInventoryPlugin plugin;
     private DeltaEssentialsPlugin essentialsPlugin;
+    private GameMode forcedGameMode = null;
 
-    private HashSet<String> authenticatedPlayers = new HashSet<>(32);
-    private HashSet<String> lockedPlayers = new HashSet<>(32);
     private HashMap<String, Integer> idMap = new HashMap<>(32);
+    private HashSet<String> authenticated = new HashSet<>(32);
+    private HashSet<String> locked = new HashSet<>(32);
+    private HashSet<String> ignoreGameModeChange = new HashSet<>(32);
 
     private HashMap<String, ServerChangeRequest> serverChangeRequests = new HashMap<>(32);
     private HashMap<String, InventoryPair> inventoryMap = new HashMap<>(32);
@@ -64,6 +67,12 @@ public class PlayerListener implements Listener
     {
         this.plugin = plugin;
         this.essentialsPlugin = essPlugin;
+
+        if(plugin.getConfig().getBoolean("ForcedGameMode.Enable", false))
+        {
+            this.forcedGameMode = GameMode.valueOf(plugin.getConfig().getString(
+                "ForcedGameMode.GameMode"));
+        }
     }
 
     public void shutdown()
@@ -88,12 +97,18 @@ public class PlayerListener implements Listener
 
         this.plugin = null;
         this.essentialsPlugin = null;
-        this.lockedPlayers.clear();
+        this.locked.clear();
         this.idMap.clear();
         this.serverChangeRequests.clear();
         this.inventoryMap.clear();
     }
 
+    /**
+     * Called when xAuth handles the login command. DeltaInventory will only queue
+     * loading the player's inventory when they have been authenticated.
+     *
+     * @param event Event to process
+     */
     @EventHandler
     public void onCommandLoginEvent(xAuthCommandLoginEvent event)
     {
@@ -102,11 +117,10 @@ public class PlayerListener implements Listener
             Player player = Bukkit.getPlayer(event.getPlayerName());
             if(player != null && player.isOnline())
             {
+                // Lock the inventory to prevent changes and add to authenticated
                 String name = player.getName().toLowerCase();
-                authenticatedPlayers.add(name);
-
-                // Lock the inventory to prevent changes
-                lockedPlayers.add(name);
+                locked.add(name);
+                authenticated.add(name);
 
                 // Schedule an inventory load
                 Integer id = idMap.get(name);
@@ -115,6 +129,13 @@ public class PlayerListener implements Listener
         }
     }
 
+    /**
+     * Called when xAuth handles a player join event where the player session
+     * is still valid. If the player is authenticated, their inventory will be
+     * queued for loading.
+     *
+     * @param event Event to process
+     */
     @EventHandler
     public void onPlayerJoinEvent(xAuthPlayerJoinEvent event)
     {
@@ -123,11 +144,10 @@ public class PlayerListener implements Listener
             Player player = Bukkit.getPlayer(event.getPlayerName());
             if(player != null && player.isOnline())
             {
+                // Lock the inventory to prevent changes and add to authenticated
                 String name = player.getName().toLowerCase();
-                authenticatedPlayers.add(name);
-
-                // Lock the inventory to prevent changes
-                lockedPlayers.add(name);
+                locked.add(name);
+                authenticated.add(name);
 
                 // Schedule an inventory load
                 Integer id = idMap.get(name);
@@ -136,13 +156,23 @@ public class PlayerListener implements Listener
         }
     }
 
+    /**
+     * Handles cleanup and inventory saving on logout.
+     *
+     * Because server switching can also be a caused for PlayerQuitEvent, this
+     * method checks if the player recently (within 2000ms) made a switch
+     * request. If they did, it is assumed the inventory has already been
+     * processed and saved.
+     *
+     * @param event Event to process
+     */
     @EventHandler(priority = EventPriority.HIGH)
     public void onPlayerQuit(PlayerQuitEvent event)
     {
         Player player = event.getPlayer();
         String name = player.getName().toLowerCase();
 
-        if(!authenticatedPlayers.contains(name)) { return; }
+        if(!authenticated.contains(name)) { return; }
 
         ServerChangeRequest request = serverChangeRequests.remove(name);
         long currentTime = System.currentTimeMillis();
@@ -161,13 +191,20 @@ public class PlayerListener implements Listener
         // Remove the inventory pair
         inventoryMap.remove(name);
 
-        // Remove the lock if it exists
-        lockedPlayers.remove(name);
-
-        // Remove from authenticated
-        authenticatedPlayers.remove(name);
+        // Remove the lock and remove from authenticated
+        locked.remove(name);
+        authenticated.remove(name);
     }
 
+    /**
+     * Intercepts the intent to switch servers and cancels it.
+     *
+     * In order to make sure the inventory is saved BEFORE switching servers,
+     * DeltaInventory will cancel the original event, queue an inventory save,
+     * and complete the request on completion of the save.
+     *
+     * @param event Event to process
+     */
     @EventHandler
     public void onPlayerServerSwitch(PlayerServerSwitchEvent event)
     {
@@ -185,18 +222,27 @@ public class PlayerListener implements Listener
             event.getDestinationServer(), System.currentTimeMillis()));
 
         // Lock the inventory to prevent changes
-        lockedPlayers.add(name);
+        locked.add(name);
 
         // Schedule an inventory save
         plugin.saveInventory(entry);
     }
 
+    /**
+     * Handles the inventory being loaded from the database. It will "reapply"
+     * the inventory and player information.
+     *
+     * @param event Event to process
+     */
     @EventHandler
     public void onInventoryLoaded(InventoryLoadEvent event)
     {
         UnmodifiablePlayerEntry entry = event.getEntry();
         Player player = Bukkit.getPlayer(entry.getName());
         String name = entry.getName().toLowerCase();
+
+        // Remove the lock if it exists
+        locked.remove(name);
 
         if(player != null && player.isOnline())
         {
@@ -207,11 +253,16 @@ public class PlayerListener implements Listener
             // Load from entry
             copyFromEntry(player, entry);
         }
-
-        // Remove the lock if it exists
-        lockedPlayers.remove(name);
     }
 
+    /**
+     * Handles the completion of an inventory save.
+     *
+     * If the player made a request to change servers, it will be completed
+     * in this method.
+     *
+     * @param event Event to process
+     */
     @EventHandler
     public void onInventorySaved(InventorySaveEvent event)
     {
@@ -222,7 +273,7 @@ public class PlayerListener implements Listener
 
         // Save the ID and remove the lock
         idMap.put(name, id);
-        lockedPlayers.remove(name);
+        locked.remove(name);
         plugin.debug("Saved inventory for {name:" + name + ", id:" + id + "}");
 
         if(request != null)
@@ -233,6 +284,13 @@ public class PlayerListener implements Listener
         }
     }
 
+    /**
+     * Handles the case of a (supposedly) new player in the database. Since there is
+     * no inventory to "reapply", it will treat the player's current state as the
+     * result in survival mode.
+     *
+     * @param event Event to process
+     */
     @EventHandler
     public void onNoInventoryFound(NoInventoryFoundEvent event)
     {
@@ -247,18 +305,48 @@ public class PlayerListener implements Listener
             pair.setSurvival(player.getInventory().getContents());
             inventoryMap.put(name, new InventoryPair());
 
-            lockedPlayers.remove(name.toLowerCase());
+            locked.remove(name.toLowerCase());
             player.setGameMode(GameMode.SURVIVAL);
         }
     }
 
+    /**
+     * Handles game mode changes.
+     *
+     * If the player does not have the SingleInv permission, they will have separate
+     * inventories for creative and survival.
+     *
+     * If a game mode is forced and the player does not have the bypass permission,
+     * they will not be allowed to change modes.
+     *
+     * @param event Event to process
+     */
     @EventHandler
     public void onPlayerGameModeChange(PlayerGameModeChangeEvent event)
     {
         Player player = event.getPlayer();
         String name = player.getName().toLowerCase();
 
-        if(!authenticatedPlayers.contains(name)) { return; }
+        if(!authenticated.contains(name)) { return; }
+
+        if(locked.contains(name))
+        {
+            player.sendMessage(FAILURE + "Not allowed to change game modes while " +
+                "inventory is being saved or loaded.");
+            event.setCancelled(true);
+            return;
+        }
+
+        if(forcedGameMode != null)
+        {
+            if(!ignoreGameModeChange.remove(name) &&
+                !player.hasPermission("DeltaInv.ForcedGameMode.Bypass"))
+            {
+                player.sendMessage(FAILURE + "Gamemode is being forced. You are not allowed to change it.");
+                event.setCancelled(true);
+                return;
+            }
+        }
 
         InventoryPair pair = inventoryMap.get(name);
         GameMode originalMode = player.getGameMode();
@@ -295,25 +383,41 @@ public class PlayerListener implements Listener
         }
     }
 
+    /**
+     * Handles players opening inventories while waiting for their inventory to
+     * load or save. This prevents a player from abusing the time period where
+     * they are waiting for their inventory and player information to save (which
+     * is usually less than a second).
+     *
+     * @param event Event to process
+     */
     @EventHandler
     public void onInventoryOpen(InventoryOpenEvent event)
     {
         String name = event.getPlayer().getName().toLowerCase();
-        if(lockedPlayers.contains(name))
+        if(locked.contains(name))
         {
-            event.getPlayer().sendMessage(Prefixes.INFO +
+            event.getPlayer().sendMessage(INFO +
                 "Your inventory is locked. Wait until it is loaded.");
             event.setCancelled(true);
         }
     }
 
+    /**
+     * Handles players interacting with inventories while waiting for their
+     * inventory to load or save. This prevents a player from abusing the time
+     * period where they are waiting for their inventory and player information
+     * to save (which is usually less than a second).
+     *
+     * @param event Event to process
+     */
     @EventHandler
     public void onInventoryInteract(InventoryInteractEvent event)
     {
         String name = event.getWhoClicked().getName().toLowerCase();
-        if(lockedPlayers.contains(name))
+        if(locked.contains(name))
         {
-            event.getWhoClicked().sendMessage(Prefixes.INFO +
+            event.getWhoClicked().sendMessage(INFO +
                 "Your inventory is locked. Wait until it is loaded.");
             event.setCancelled(true);
         }
@@ -330,6 +434,8 @@ public class PlayerListener implements Listener
         entry.setXpLevel(player.getLevel());
         entry.setXpProgress(player.getExp());
         entry.setPotionEffects(PotionEffectUtils.serialize(player.getActivePotionEffects()));
+        entry.setArmor(player.getInventory().getArmorContents());
+        entry.setEnderInventory(player.getEnderChest().getContents());
 
         if(player.hasPermission("DeltaInv.SingleInv"))
         {
@@ -365,10 +471,6 @@ public class PlayerListener implements Listener
                     break;
             }
         }
-
-        entry.setArmor(player.getInventory().getArmorContents());
-        entry.setEnderInventory(player.getEnderChest().getContents());
-
         return entry;
     }
 
@@ -392,6 +494,7 @@ public class PlayerListener implements Listener
         {
             player.getInventory().setArmorContents(entry.getArmor());
         }
+
         if(entry.getEnderInventory() != null)
         {
             player.getEnderChest().setContents(entry.getEnderInventory());
@@ -427,33 +530,45 @@ public class PlayerListener implements Listener
             }
         }
 
-        // Switch the server to game mode they should be in
-        switch(entry.getGameMode())
+        // If game mode is not forced
+        if(forcedGameMode == null)
         {
-            case PlayerEntry.SURVIVAL:
-                if(player.getGameMode() != GameMode.SURVIVAL)
-                {
-                    player.setGameMode(GameMode.SURVIVAL);
-                }
-                break;
-            case PlayerEntry.CREATIVE:
-                if(player.getGameMode() != GameMode.CREATIVE)
-                {
-                    player.setGameMode(GameMode.CREATIVE);
-                }
-                break;
-            case PlayerEntry.ADVENTURE:
-                if(player.getGameMode() != GameMode.ADVENTURE)
-                {
-                    player.setGameMode(GameMode.ADVENTURE);
-                }
-                break;
-            case PlayerEntry.SPECTATOR:
-                if(player.getGameMode() != GameMode.SPECTATOR)
-                {
-                    player.setGameMode(GameMode.SPECTATOR);
-                }
-                break;
+            // Switch the server to game mode they should be in
+            switch(entry.getGameMode())
+            {
+                case PlayerEntry.SURVIVAL:
+                    if(player.getGameMode() != GameMode.SURVIVAL)
+                    {
+                        player.setGameMode(GameMode.SURVIVAL);
+                    }
+                    break;
+                case PlayerEntry.CREATIVE:
+                    if(player.getGameMode() != GameMode.CREATIVE)
+                    {
+                        player.setGameMode(GameMode.CREATIVE);
+                    }
+                    break;
+                case PlayerEntry.ADVENTURE:
+                    if(player.getGameMode() != GameMode.ADVENTURE)
+                    {
+                        player.setGameMode(GameMode.ADVENTURE);
+                    }
+                    break;
+                case PlayerEntry.SPECTATOR:
+                    if(player.getGameMode() != GameMode.SPECTATOR)
+                    {
+                        player.setGameMode(GameMode.SPECTATOR);
+                    }
+                    break;
+            }
+        }
+        else
+        {
+            if(player.getGameMode() != forcedGameMode)
+            {
+                ignoreGameModeChange.add(name);
+                player.setGameMode(forcedGameMode);
+            }
         }
     }
 
