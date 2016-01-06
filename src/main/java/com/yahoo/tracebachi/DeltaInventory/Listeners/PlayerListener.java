@@ -538,7 +538,7 @@ public class PlayerListener implements Listener
         }
 
         // If game mode is not forced
-        if(forcedGameMode == null)
+        if(forcedGameMode == null || player.hasPermission("DeltaInv.ForcedGameMode.Bypass"))
         {
             // Switch the server to game mode they should be in
             switch(entry.getGameMode())
