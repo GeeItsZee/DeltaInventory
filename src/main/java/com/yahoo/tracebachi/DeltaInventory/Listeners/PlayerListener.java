@@ -22,6 +22,7 @@ import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
 import com.yahoo.tracebachi.DeltaInventory.Events.InventoryLoadEvent;
 import com.yahoo.tracebachi.DeltaInventory.Events.InventorySaveEvent;
 import com.yahoo.tracebachi.DeltaInventory.Events.NoInventoryFoundEvent;
+import com.yahoo.tracebachi.DeltaInventory.Events.PrePlayerSaveEvent;
 import com.yahoo.tracebachi.DeltaInventory.PotionEffectUtils;
 import com.yahoo.tracebachi.DeltaInventory.Storage.InventoryPair;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
@@ -85,6 +86,8 @@ public class PlayerListener implements Listener
                 InventoryPair pair = inventoryMap.get(name);
                 PlayerEntry entry = createPlayerEntry(player, pair);
 
+                PrePlayerSaveEvent preSaveEvent = new PrePlayerSaveEvent(player);
+                Bukkit.getPluginManager().callEvent(preSaveEvent);
                 serverChangeRequests.remove(name);
                 plugin.saveInventoryNow(entry);
             }
@@ -185,6 +188,8 @@ public class PlayerListener implements Listener
             PlayerEntry entry = createPlayerEntry(player, pair);
 
             // Schedule an inventory save
+            PrePlayerSaveEvent preSaveEvent = new PrePlayerSaveEvent(player);
+            Bukkit.getPluginManager().callEvent(preSaveEvent);
             plugin.saveInventory(entry);
         }
 
@@ -225,6 +230,8 @@ public class PlayerListener implements Listener
         locked.add(name);
 
         // Schedule an inventory save
+        PrePlayerSaveEvent preSaveEvent = new PrePlayerSaveEvent(player);
+        Bukkit.getPluginManager().callEvent(preSaveEvent);
         plugin.saveInventory(entry);
     }
 
