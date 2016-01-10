@@ -3,6 +3,9 @@ main: com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin
 version: 1.1
 author: Trace Bachi (tracebachi@yahoo.com, BigBossZee)
 depend: [xAuth, DeltaRedis, DeltaEssentials]
+# Add all minigames on your server to this list to help
+# avoid the wrong inventories being saved on shutdown
+loadbefore: [MobArena, FloorIsLava]
 
 permissions:
   DeltaInv.SingleInv:

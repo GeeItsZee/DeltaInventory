@@ -541,6 +541,11 @@ public class PlayerListener implements Listener
         player.setLevel(entry.getXpLevel());
         player.setExp(entry.getXpProgress());
 
+        for(PotionEffect existingEffect : player.getActivePotionEffects())
+        {
+            player.removePotionEffect(existingEffect.getType());
+        }
+
         for(PotionEffect effect : PotionEffectUtils.deserialize(entry.getPotionEffects()))
         {
             effect.apply(player);
