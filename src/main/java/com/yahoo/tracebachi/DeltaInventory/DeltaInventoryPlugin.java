@@ -139,19 +139,19 @@ public class DeltaInventoryPlugin extends JavaPlugin
         }
     }
 
-    public void saveInventoryNow(PlayerEntry entry)
+    public void saveInventoryForShutdown(PlayerEntry entry)
     {
         if(entry.getId() == null)
         {
             PlayerSaveInsert runnable = new PlayerSaveInsert(entry, listener, this);
             debug("Saving inventory sync for {name:" + entry.getName() + ", id: N/A}" );
-            runnable.run();
+            runnable.runSyncForShutdown();
         }
         else
         {
             PlayerSaveUpdate runnable = new PlayerSaveUpdate(entry, listener, this);
             debug("Saving inventory sync for {name:" + entry.getName() + ", id:" + entry.getId() + "}" );
-            runnable.run();
+            runnable.runSyncForShutdown();
         }
     }
 

@@ -111,4 +111,48 @@ public class PlayerSaveInsert implements Runnable
                     "illegal items in your inventory?"));
         }
     }
+
+    public void runSyncForShutdown()
+    {
+        try(Connection connection = DeltaInventoryPlugin.dataSource.getConnection())
+        {
+            try(PreparedStatement statement = connection.prepareStatement(STATEMENT_TEXT,
+                PreparedStatement.RETURN_GENERATED_KEYS))
+            {
+                byte[] serializedInv = InventoryUtils.serialize(entry);
+
+                statement.setString(1, entry.getName());
+                statement.setDouble(2, entry.getHealth());
+                statement.setInt(3, entry.getFoodLevel());
+                statement.setInt(4, entry.getXpLevel());
+                statement.setFloat(5, entry.getXpProgress());
+                statement.setString(6, entry.getGameMode().toString());
+                statement.setString(7, entry.getPotionEffects());
+                statement.setBytes(8, serializedInv);
+
+                statement.executeUpdate();
+            }
+
+            try(PreparedStatement statement = connection.prepareStatement(GET_ID))
+            {
+                statement.setString(1, entry.getName());
+                try(ResultSet resultSet = statement.executeQuery())
+                {
+                    if(resultSet.next())
+                    {
+                        String name = entry.getName();
+                        Integer id = resultSet.getInt("id");
+
+                        listener.onInventorySaved(name, id);
+                    }
+                }
+            }
+        }
+        catch(SQLException | IOException | InventorySaveException ex)
+        {
+            ex.printStackTrace();
+            listener.onInventorySaveFailure(entry.getName(),
+                "Failed to save inventory! Do you have any illegal items in your inventory?");
+        }
+    }
 }

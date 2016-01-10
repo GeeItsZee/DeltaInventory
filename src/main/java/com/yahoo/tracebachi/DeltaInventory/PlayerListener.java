@@ -92,7 +92,7 @@ public class PlayerListener implements Listener
 
                 // Save inventory now
                 serverChangeRequests.remove(name);
-                plugin.saveInventoryNow(entry);
+                plugin.saveInventoryForShutdown(entry);
             }
             catch(Exception ex)
             {
