@@ -18,12 +18,11 @@ package com.yahoo.tracebachi.DeltaInventory.Runnables;
 
 import com.google.common.base.Preconditions;
 import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
-import com.yahoo.tracebachi.DeltaInventory.Events.InventorySaveEvent;
-import com.yahoo.tracebachi.DeltaInventory.Exceptions.InventorySerializationException;
+import com.yahoo.tracebachi.DeltaInventory.Exceptions.InventorySaveException;
 import com.yahoo.tracebachi.DeltaInventory.InventoryUtils;
+import com.yahoo.tracebachi.DeltaInventory.PlayerListener;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -37,8 +36,8 @@ import java.sql.SQLException;
 public class PlayerSaveInsert implements Runnable
 {
     private static final String STATEMENT_TEXT =
-        " INSERT INTO DeltaInv " +
-            " (name, health, hunger, xp_level, xp_progress, gamemode, potion_effects, items) " +
+        " INSERT INTO deltainventory " +
+            " (name, health, hunger, xp_level, xp_progress, gamemode, effects, items) " +
             " VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
         " ON DUPLICATE KEY UPDATE " +
             " health = VALUES(health), " +
@@ -46,22 +45,24 @@ public class PlayerSaveInsert implements Runnable
             " xp_level = VALUES(xp_level)," +
             " xp_progress = VALUES(xp_progress), " +
             " gamemode = VALUES(gamemode), " +
-            " potion_effects = VALUES(potion_effects), " +
+            " effects = VALUES(effects), " +
             " items = VALUES(items);";
 
     private static final String GET_ID =
-        " SELECT id FROM DeltaInv WHERE name=? LIMIT 1;";
+        " SELECT id FROM deltainventory WHERE name = ? LIMIT 1;";
 
-    private final DeltaInventoryPlugin plugin;
     private final PlayerEntry entry;
+    private final PlayerListener listener;
+    private final DeltaInventoryPlugin plugin;
 
-    public PlayerSaveInsert(DeltaInventoryPlugin plugin, PlayerEntry entry)
+    public PlayerSaveInsert(PlayerEntry entry, PlayerListener listener, DeltaInventoryPlugin plugin)
     {
         Preconditions.checkNotNull(plugin, "Plugin cannot be null.");
         Preconditions.checkNotNull(entry, "Entry cannot be null.");
 
-        this.plugin = plugin;
         this.entry = entry;
+        this.listener = listener;
+        this.plugin = plugin;
     }
 
     @Override
@@ -69,7 +70,8 @@ public class PlayerSaveInsert implements Runnable
     {
         try(Connection connection = DeltaInventoryPlugin.dataSource.getConnection())
         {
-            try(PreparedStatement statement = connection.prepareStatement(STATEMENT_TEXT, PreparedStatement.RETURN_GENERATED_KEYS))
+            try(PreparedStatement statement = connection.prepareStatement(STATEMENT_TEXT,
+                PreparedStatement.RETURN_GENERATED_KEYS))
             {
                 byte[] serializedInv = InventoryUtils.serialize(entry);
 
@@ -78,7 +80,7 @@ public class PlayerSaveInsert implements Runnable
                 statement.setInt(3, entry.getFoodLevel());
                 statement.setInt(4, entry.getXpLevel());
                 statement.setFloat(5, entry.getXpProgress());
-                statement.setInt(6, entry.getGameMode());
+                statement.setString(6, entry.getGameMode().toString());
                 statement.setString(7, entry.getPotionEffects());
                 statement.setBytes(8, serializedInv);
 
@@ -88,72 +90,25 @@ public class PlayerSaveInsert implements Runnable
             try(PreparedStatement statement = connection.prepareStatement(GET_ID))
             {
                 statement.setString(1, entry.getName());
-
                 try(ResultSet resultSet = statement.executeQuery())
                 {
                     if(resultSet.next())
                     {
-                        int id = resultSet.getInt("id");
-                        InventorySaveEvent event = new InventorySaveEvent(entry.getName(), id);
+                        String name = entry.getName();
+                        Integer id = resultSet.getInt("id");
 
-                        Bukkit.getScheduler().runTask(plugin, () -> {
-                            Bukkit.getPluginManager().callEvent(event);
-                        });
+                        Bukkit.getScheduler().runTask(plugin, () ->
+                            listener.onInventorySaved(name, id));
                     }
                 }
             }
         }
-        catch(SQLException | IOException ex)
+        catch(SQLException | IOException | InventorySaveException ex)
         {
             ex.printStackTrace();
-        }
-        catch(InventorySerializationException ex)
-        {
-            Bukkit.getScheduler().runTask(plugin, () ->
-            {
-                Player player = Bukkit.getPlayer(entry.getName());
-                if(player != null && player.isOnline())
-                {
-                    player.sendMessage("Failed to serialize inventory! " +
-                        "Do you have any illegal items in your inventory?");
-                }
-            });
-        }
-    }
-
-    public void runWithoutEvents()
-    {
-        try(Connection connection = DeltaInventoryPlugin.dataSource.getConnection())
-        {
-            try(PreparedStatement statement = connection.prepareStatement(STATEMENT_TEXT, PreparedStatement.RETURN_GENERATED_KEYS))
-            {
-                byte[] serializedInv = InventoryUtils.serialize(entry);
-
-                statement.setString(1, entry.getName());
-                statement.setDouble(2, entry.getHealth());
-                statement.setInt(3, entry.getFoodLevel());
-                statement.setInt(4, entry.getXpLevel());
-                statement.setFloat(5, entry.getXpProgress());
-                statement.setInt(6, entry.getGameMode());
-                statement.setString(7, entry.getPotionEffects());
-                statement.setBytes(8, serializedInv);
-
-                statement.executeUpdate();
-            }
-
-            try(PreparedStatement statement = connection.prepareStatement(GET_ID))
-            {
-                statement.setString(1, entry.getName());
-
-                try(ResultSet resultSet = statement.executeQuery())
-                {
-                    resultSet.next();
-                }
-            }
-        }
-        catch(SQLException | IOException ex)
-        {
-            ex.printStackTrace();
+            Bukkit.getScheduler().runTask(plugin, () -> listener.onInventorySaveFailure(
+                entry.getName(), "Failed to save inventory! Do you have any " +
+                    "illegal items in your inventory?"));
         }
     }
 }

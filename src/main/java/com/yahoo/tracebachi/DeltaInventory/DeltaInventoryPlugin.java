@@ -17,10 +17,10 @@
 package com.yahoo.tracebachi.DeltaInventory;
 
 import com.yahoo.tracebachi.DeltaEssentials.DeltaEssentialsPlugin;
-import com.yahoo.tracebachi.DeltaInventory.Listeners.PlayerListener;
 import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerLoad;
 import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerSaveInsert;
 import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerSaveUpdate;
+import com.yahoo.tracebachi.DeltaInventory.Storage.ModifiablePlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -38,15 +38,15 @@ public class DeltaInventoryPlugin extends JavaPlugin
     public static HikariDataSource dataSource;
 
     private static final String CREATE_TABLE_STATEMENT =
-        " CREATE TABLE IF NOT EXISTS DeltaInv (" +
+        " CREATE TABLE IF NOT EXISTS deltainventory (" +
         " id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY," +
         " name CHAR(32) NOT NULL UNIQUE KEY," +
         " health DOUBLE NOT NULL," +
         " hunger INT NOT NULL," +
         " xp_level INT NOT NULL," +
         " xp_progress FLOAT NOT NULL," +
-        " gamemode TINYINT NOT NULL," +
-        " potion_effects VARCHAR(256) NOT NULL," +
+        " gamemode CHAR(10) NOT NULL," +
+        " effects VARCHAR(256) NOT NULL," +
         " lastupdate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
         " items BLOB" +
         " )";
@@ -127,13 +127,13 @@ public class DeltaInventoryPlugin extends JavaPlugin
     {
         if(entry.getId() == null)
         {
-            PlayerSaveInsert runnable = new PlayerSaveInsert(this, entry);
+            PlayerSaveInsert runnable = new PlayerSaveInsert(entry, listener, this);
             getServer().getScheduler().runTaskAsynchronously(this, runnable);
             debug("Saving inventory async for {name:" + entry.getName() + ", id: N/A}" );
         }
         else
         {
-            PlayerSaveUpdate runnable = new PlayerSaveUpdate(this, entry);
+            PlayerSaveUpdate runnable = new PlayerSaveUpdate(entry, listener, this);
             getServer().getScheduler().runTaskAsynchronously(this, runnable);
             debug("Saving inventory async for {name:" + entry.getName() + ", id:" + entry.getId() + "}" );
         }
@@ -143,21 +143,21 @@ public class DeltaInventoryPlugin extends JavaPlugin
     {
         if(entry.getId() == null)
         {
-            PlayerSaveInsert runnable = new PlayerSaveInsert(this, entry);
+            PlayerSaveInsert runnable = new PlayerSaveInsert(entry, listener, this);
             debug("Saving inventory sync for {name:" + entry.getName() + ", id: N/A}" );
-            runnable.runWithoutEvents();
+            runnable.run();
         }
         else
         {
-            PlayerSaveUpdate runnable = new PlayerSaveUpdate(this, entry);
+            PlayerSaveUpdate runnable = new PlayerSaveUpdate(entry, listener, this);
             debug("Saving inventory sync for {name:" + entry.getName() + ", id:" + entry.getId() + "}" );
-            runnable.runWithoutEvents();
+            runnable.run();
         }
     }
 
     public void loadInventory(String name, Integer id)
     {
-        PlayerLoad runnable = new PlayerLoad(this, name, id);
+        PlayerLoad runnable = new PlayerLoad(name, id, listener, this);
         getServer().getScheduler().runTaskAsynchronously(this, runnable);
         debug("Loading inventory async for {name:" + name + ", id:" + id + "}" );
     }
@@ -168,7 +168,7 @@ public class DeltaInventoryPlugin extends JavaPlugin
         {
             try(Statement statement = connection.createStatement())
             {
-                info("Creating Tables ...");
+                info("Creating Table ...");
                 statement.executeUpdate(CREATE_TABLE_STATEMENT);
                 info("................... Done");
                 statement.close();

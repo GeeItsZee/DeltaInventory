@@ -17,8 +17,10 @@
 package com.yahoo.tracebachi.DeltaInventory;
 
 import com.google.common.base.Preconditions;
-import com.yahoo.tracebachi.DeltaInventory.Exceptions.InventorySerializationException;
+import com.yahoo.tracebachi.DeltaInventory.Exceptions.InventorySaveException;
+import com.yahoo.tracebachi.DeltaInventory.Storage.ModifiablePlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
+import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerInventory;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -29,8 +31,6 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -43,51 +43,62 @@ public interface InventoryUtils
     {
         Preconditions.checkNotNull(entry, "Entry cannot be null.");
         YamlConfiguration configuration = new YamlConfiguration();
-
-        if(entry.getArmor() != null)
-        {
-            ItemStack[] armor = entry.getArmor();
-            for(int i = 0; i < armor.length; ++i)
-            {
-                if(armor[i] != null && armor[i].getType() != Material.AIR)
-                {
-                    configuration.set("Armor." + i, armor[i]);
-                }
-            }
-        }
+        ItemStack[] itemStacks;
 
         if(entry.getSurvivalInventory() != null)
         {
-            ItemStack[] inv = entry.getSurvivalInventory();
-            for(int i = 0; i < inv.length; ++i)
+            PlayerInventory playerInv = entry.getSurvivalInventory();
+
+            itemStacks = playerInv.getArmor();
+            for(int i = 0; i < itemStacks.length; ++i)
             {
-                if(inv[i] != null && inv[i].getType() != Material.AIR)
+                if(itemStacks[i] != null && itemStacks[i].getType() != Material.AIR)
                 {
-                    configuration.set("Survival." + i, inv[i]);
+                    configuration.set("Survival.Armor." + i, itemStacks[i]);
+                }
+            }
+
+            itemStacks = playerInv.getContents();
+            for(int i = 0; i < itemStacks.length; ++i)
+            {
+                if(itemStacks[i] != null && itemStacks[i].getType() != Material.AIR)
+                {
+                    configuration.set("Survival.Inv." + i, itemStacks[i]);
                 }
             }
         }
 
         if(entry.getCreativeInventory() != null)
         {
-            ItemStack[] inv = entry.getCreativeInventory();
-            for(int i = 0; i < inv.length; ++i)
+            PlayerInventory playerInv = entry.getCreativeInventory();
+
+            itemStacks = playerInv.getArmor();
+            for(int i = 0; i < itemStacks.length; ++i)
             {
-                if(inv[i] != null && inv[i].getType() != Material.AIR)
+                if(itemStacks[i] != null && itemStacks[i].getType() != Material.AIR)
                 {
-                    configuration.set("Creative." + i, inv[i]);
+                    configuration.set("Creative.Armor." + i, itemStacks[i]);
+                }
+            }
+
+            itemStacks = playerInv.getContents();
+            for(int i = 0; i < itemStacks.length; ++i)
+            {
+                if(itemStacks[i] != null && itemStacks[i].getType() != Material.AIR)
+                {
+                    configuration.set("Creative.Inv." + i, itemStacks[i]);
                 }
             }
         }
 
         if(entry.getEnderInventory() != null)
         {
-            ItemStack[] inv = entry.getEnderInventory();
-            for(int i = 0; i < inv.length; ++i)
+            itemStacks = entry.getEnderInventory();
+            for(int i = 0; i < itemStacks.length; ++i)
             {
-                if(inv[i] != null && inv[i].getType() != Material.AIR)
+                if(itemStacks[i] != null && itemStacks[i].getType() != Material.AIR)
                 {
-                    configuration.set("Ender." + i, inv[i]);
+                    configuration.set("EnderChest." + i, itemStacks[i]);
                 }
             }
         }
@@ -105,60 +116,71 @@ public interface InventoryUtils
         }
         catch(NullPointerException ex)
         {
-            throw new InventorySerializationException(ex);
+            throw new InventorySaveException(ex);
         }
     }
 
-    static Map<String, ItemStack[]> deserialize(byte[] compBytes) throws InvalidConfigurationException, IOException
+    static void deserialize(byte[] compBytes, ModifiablePlayerEntry entry) throws InvalidConfigurationException, IOException
     {
         int nRead;
         byte[] data = new byte[2048];
         ByteArrayInputStream bis = new ByteArrayInputStream(compBytes);
         GZIPInputStream gzip = new GZIPInputStream(bis);
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        PlayerInventory playerInventory;
 
         while((nRead = gzip.read(data, 0, data.length)) != -1)
         {
             buffer.write(data, 0, nRead);
         }
 
-        HashMap<String, ItemStack[]> map = new HashMap<>();
         YamlConfiguration configuration = new YamlConfiguration();
         configuration.loadFromString(new String(buffer.toByteArray(), StandardCharsets.UTF_8));
 
-        ConfigurationSection armorSection = configuration.getConfigurationSection("Armor");
-        map.put("Armor", readInventorySection(armorSection, 4));
-
         ConfigurationSection survivalSection = configuration.getConfigurationSection("Survival");
-        map.put("Survival", readInventorySection(survivalSection, 36));
+        playerInventory = readPlayerInventory(survivalSection);
+        entry.setSurvivalInventory(playerInventory);
 
         ConfigurationSection creativeSection = configuration.getConfigurationSection("Creative");
-        map.put("Creative", readInventorySection(creativeSection, 36));
+        playerInventory = readPlayerInventory(creativeSection);
+        entry.setCreativeInventory(playerInventory);
 
-        ConfigurationSection enderSection = configuration.getConfigurationSection("Ender");
-        map.put("Ender", readInventorySection(enderSection, 27));
-
-        return map;
+        ConfigurationSection enderChestSection = configuration.getConfigurationSection("EnderChest");
+        ItemStack[] itemStacks = readItemStacks(enderChestSection, 27);
+        entry.setEnderInventory(itemStacks);
     }
 
-    static ItemStack[] readInventorySection(ConfigurationSection section, int maxSize)
+    static PlayerInventory readPlayerInventory(ConfigurationSection section)
     {
-        if(section == null)
+        if(section != null)
         {
-            return null;
+            ItemStack[] armor = readItemStacks(section.getConfigurationSection("Armor"), 4);
+            ItemStack[] inventory = readItemStacks(section.getConfigurationSection("Inv"), 36);
+            return new PlayerInventory(armor, inventory);
         }
-
-        ItemStack[] destination = new ItemStack[maxSize];
-        for(String key : section.getKeys(false))
+        else
         {
-            try
+            return new PlayerInventory(new ItemStack[4], new ItemStack[36]);
+        }
+    }
+
+    static ItemStack[] readItemStacks(ConfigurationSection section, int maxSize)
+    {
+        ItemStack[] destination = new ItemStack[maxSize];
+
+        if(section != null)
+        {
+            for(String key : section.getKeys(false))
             {
-                Integer keyAsInt = Integer.parseInt(key);
-                destination[keyAsInt] = section.getItemStack(key);
-            }
-            catch(NumberFormatException ex)
-            {
-                ex.printStackTrace();
+                try
+                {
+                    Integer keyAsInt = Integer.parseInt(key);
+                    destination[keyAsInt] = section.getItemStack(key);
+                }
+                catch(NumberFormatException ex)
+                {
+                    ex.printStackTrace();
+                }
             }
         }
         return destination;

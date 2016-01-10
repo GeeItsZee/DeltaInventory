@@ -16,26 +16,27 @@
  */
 package com.yahoo.tracebachi.DeltaInventory.Events;
 
-import com.yahoo.tracebachi.DeltaInventory.Storage.UnmodifiablePlayerEntry;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
-public class InventoryLoadEvent extends Event
+public class PlayerPreSaveEvent extends Event
 {
     private static final HandlerList handlers = new HandlerList();
-    private final UnmodifiablePlayerEntry entry;
 
-    public InventoryLoadEvent(UnmodifiablePlayerEntry entry)
+    private final Player player;
+
+    public PlayerPreSaveEvent(Player player)
     {
-        this.entry = entry;
+        this.player = player;
     }
 
-    public UnmodifiablePlayerEntry getEntry()
+    public Player getPlayer()
     {
-        return entry;
+        return player;
     }
 
     @Override

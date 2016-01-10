@@ -18,20 +18,18 @@ package com.yahoo.tracebachi.DeltaInventory.Runnables;
 
 import com.google.common.base.Preconditions;
 import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
-import com.yahoo.tracebachi.DeltaInventory.Events.InventoryLoadEvent;
-import com.yahoo.tracebachi.DeltaInventory.Events.NoInventoryFoundEvent;
 import com.yahoo.tracebachi.DeltaInventory.InventoryUtils;
-import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
+import com.yahoo.tracebachi.DeltaInventory.PlayerListener;
+import com.yahoo.tracebachi.DeltaInventory.Storage.ModifiablePlayerEntry;
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.configuration.InvalidConfigurationException;
-import org.bukkit.inventory.ItemStack;
 
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Map;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
@@ -39,34 +37,36 @@ import java.util.Map;
 public class PlayerLoad implements Runnable
 {
     private static final String SELECT_BY_NAME =
-        " SELECT id, name, health, hunger, xp_level, xp_progress, gamemode, potion_effects, items" +
-            " FROM DeltaInv" +
-            " WHERE name=?" +
-            " LIMIT 1;";
+        " SELECT id, name, health, hunger, xp_level, xp_progress, gamemode, effects, items" +
+        " FROM deltainventory" +
+        " WHERE name=?" +
+        " LIMIT 1;";
 
     private static final String SELECT_BY_ID =
-        " SELECT id, name, health, hunger, xp_level, xp_progress, gamemode, potion_effects, items" +
-            " FROM DeltaInv" +
-            " WHERE id=?" +
-            " LIMIT 1;";
+        " SELECT id, name, health, hunger, xp_level, xp_progress, gamemode, effects, items" +
+        " FROM deltainventory" +
+        " WHERE id=?" +
+        " LIMIT 1;";
 
-    private final DeltaInventoryPlugin plugin;
     private final String name;
     private final Integer id;
+    private final PlayerListener listener;
+    private final DeltaInventoryPlugin plugin;
 
-    public PlayerLoad(DeltaInventoryPlugin plugin, String name)
+    public PlayerLoad(String name, PlayerListener listener, DeltaInventoryPlugin plugin)
     {
-        this(plugin, name, null);
+        this(name, null, listener, plugin);
     }
 
-    public PlayerLoad(DeltaInventoryPlugin plugin, String name, Integer id)
+    public PlayerLoad(String name, Integer id, PlayerListener listener, DeltaInventoryPlugin plugin)
     {
         Preconditions.checkNotNull(plugin, "Plugin cannot be null.");
         Preconditions.checkNotNull(name, "Name cannot be null.");
 
-        this.plugin = plugin;
         this.name = name.toLowerCase();
         this.id = id;
+        this.listener = listener;
+        this.plugin = plugin;
     }
 
     @Override
@@ -102,39 +102,28 @@ public class PlayerLoad implements Runnable
         catch(SQLException | InvalidConfigurationException | IOException ex)
         {
             ex.printStackTrace();
-
-            NoInventoryFoundEvent event = new NoInventoryFoundEvent(name);
-
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                Bukkit.getPluginManager().callEvent(event);
-            });
+            Bukkit.getScheduler().runTask(plugin, () -> listener.onInventoryNotFound(name));
         }
     }
 
-    private void handleResultSet(ResultSet resultSet) throws SQLException, InvalidConfigurationException, IOException
+    private void handleResultSet(ResultSet resultSet) throws
+        SQLException, InvalidConfigurationException, IOException
     {
         if(resultSet.next())
         {
-            PlayerEntry entry = getEntryFromResultSet(resultSet);
-            InventoryLoadEvent event = new InventoryLoadEvent(entry);
-
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                Bukkit.getPluginManager().callEvent(event);
-            });
+            ModifiablePlayerEntry entry = getEntryFromResultSet(resultSet);
+            Bukkit.getScheduler().runTask(plugin, () -> listener.onInventoryLoaded(entry));
         }
         else
         {
-            NoInventoryFoundEvent event = new NoInventoryFoundEvent(name);
-
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                Bukkit.getPluginManager().callEvent(event);
-            });
+            Bukkit.getScheduler().runTask(plugin, () -> listener.onInventoryNotFound(name));
         }
     }
 
-    private PlayerEntry getEntryFromResultSet(ResultSet resultSet) throws SQLException, InvalidConfigurationException, IOException
+    private ModifiablePlayerEntry getEntryFromResultSet(ResultSet resultSet) throws
+        SQLException, InvalidConfigurationException, IOException
     {
-        PlayerEntry entry = new PlayerEntry();
+        ModifiablePlayerEntry entry = new ModifiablePlayerEntry();
 
         entry.setId(resultSet.getInt("id"));
         entry.setName(resultSet.getString("name"));
@@ -142,17 +131,11 @@ public class PlayerLoad implements Runnable
         entry.setFoodLevel(resultSet.getInt("hunger"));
         entry.setXpLevel(resultSet.getInt("xp_level"));
         entry.setXpProgress(resultSet.getFloat("xp_progress"));
-        entry.setGameMode(resultSet.getInt("gamemode"));
-        entry.setPotionEffects(resultSet.getString("potion_effects"));
+        entry.setGameMode(GameMode.valueOf(resultSet.getString("gamemode")));
+        entry.setPotionEffects(resultSet.getString("effects"));
 
         byte[] itemBytes = resultSet.getBytes("items");
-        Map<String, ItemStack[]> items = InventoryUtils.deserialize(itemBytes);
-
-        entry.setSurvivalInventory(items.get("Survival"));
-        entry.setCreativeInventory(items.get("Creative"));
-        entry.setArmor(items.get("Armor"));
-        entry.setEnderInventory(items.get("Ender"));
-
+        InventoryUtils.deserialize(itemBytes, entry);
         return entry;
     }
 }

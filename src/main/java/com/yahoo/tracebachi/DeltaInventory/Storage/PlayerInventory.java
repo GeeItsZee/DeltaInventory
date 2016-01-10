@@ -14,44 +14,37 @@
  * You should have received a copy of the GNU General Public License
  * along with DeltaInventory.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yahoo.tracebachi.DeltaInventory.Events;
+package com.yahoo.tracebachi.DeltaInventory.Storage;
 
-import org.bukkit.event.Event;
-import org.bukkit.event.HandlerList;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
-public class InventorySaveEvent extends Event
+public class PlayerInventory
 {
-    private static final HandlerList handlers = new HandlerList();
-    private final String name;
-    private final int id;
+    private ItemStack[] armor;
+    private ItemStack[] contents;
 
-    public InventorySaveEvent(String name, int id)
+    public PlayerInventory(Player player)
     {
-        this.name = name;
-        this.id = id;
+        this(player.getInventory().getArmorContents(), player.getInventory().getContents());
     }
 
-    public String getName()
+    public PlayerInventory(ItemStack[] armor, ItemStack[] contents)
     {
-        return name;
+        this.armor = armor;
+        this.contents = contents;
     }
 
-    public int getId()
+    public ItemStack[] getArmor()
     {
-        return id;
+        return armor;
     }
 
-    @Override
-    public HandlerList getHandlers()
+    public ItemStack[] getContents()
     {
-        return handlers;
-    }
-
-    public static HandlerList getHandlerList()
-    {
-        return handlers;
+        return contents;
     }
 }

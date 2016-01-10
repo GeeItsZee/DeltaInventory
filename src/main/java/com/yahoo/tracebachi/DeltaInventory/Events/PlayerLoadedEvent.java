@@ -23,15 +23,21 @@ import org.bukkit.event.HandlerList;
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
-public class PrePlayerSaveEvent extends Event
+public class PlayerLoadedEvent extends Event
 {
     private static final HandlerList handlers = new HandlerList();
-
+    private final String name;
     private final Player player;
 
-    public PrePlayerSaveEvent(Player player)
+    public PlayerLoadedEvent(String name, Player player)
     {
+        this.name = name;
         this.player = player;
+    }
+
+    public String getName()
+    {
+        return name;
     }
 
     public Player getPlayer()

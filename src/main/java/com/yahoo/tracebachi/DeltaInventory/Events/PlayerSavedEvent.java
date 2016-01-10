@@ -16,25 +16,33 @@
  */
 package com.yahoo.tracebachi.DeltaInventory.Events;
 
+import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
-public class NoInventoryFoundEvent extends Event
+public class PlayerSavedEvent extends Event
 {
     private static final HandlerList handlers = new HandlerList();
     private final String name;
+    private final Player player;
 
-    public NoInventoryFoundEvent(String name)
+    public PlayerSavedEvent(String name, Player player)
     {
         this.name = name;
+        this.player = player;
     }
 
     public String getName()
     {
         return name;
+    }
+
+    public Player getPlayer()
+    {
+        return player;
     }
 
     @Override

@@ -23,36 +23,44 @@ import org.bukkit.inventory.ItemStack;
  */
 public class InventoryPair
 {
-    private ItemStack[] survival;
-    private ItemStack[] creative;
-
-    public ItemStack[] getSurvival()
-    {
-        return (survival == null) ? new ItemStack[36] : survival;
-    }
-
-    public void setSurvival(ItemStack[] survival)
-    {
-        this.survival = survival;
-    }
+    private PlayerInventory survival;
+    private PlayerInventory creative;
 
     public boolean hasSurvival()
     {
         return survival != null;
     }
 
-    public ItemStack[] getCreative()
+    public PlayerInventory getSurvival()
     {
-        return (creative == null) ? new ItemStack[36] : creative;
+        if(survival == null)
+        {
+            return new PlayerInventory(new ItemStack[4], new ItemStack[36]);
+        }
+        return survival;
     }
 
-    public void setCreative(ItemStack[] creative)
+    public void setSurvival(PlayerInventory survival)
     {
-        this.creative = creative;
+        this.survival = survival;
     }
 
     public boolean hasCreative()
     {
         return creative != null;
+    }
+
+    public PlayerInventory getCreative()
+    {
+        if(creative == null)
+        {
+            return new PlayerInventory(new ItemStack[4], new ItemStack[36]);
+        }
+        return creative;
+    }
+
+    public void setCreative(PlayerInventory creative)
+    {
+        this.creative = creative;
     }
 }

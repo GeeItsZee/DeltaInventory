@@ -22,173 +22,27 @@ import org.bukkit.inventory.ItemStack;
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
-public class PlayerEntry implements UnmodifiablePlayerEntry
+public interface PlayerEntry
 {
-    public static final int SURVIVAL = 0;
-    public static final int CREATIVE = 1;
-    public static final int ADVENTURE = 2;
-    public static final int SPECTATOR = 3;
+    Integer getId();
 
-    private Integer id;
-    private String name;
-    private double health;
-    private int foodLevel;
-    private int xpLevel;
-    private float xpProgress;
-    private int gameMode;
-    private String potionEffects;
-    private ItemStack[] armor;
-    private ItemStack[] survivalInventory;
-    private ItemStack[] creativeInventory;
-    private ItemStack[] enderInventory;
+    String getName();
 
-    @Override
-    public Integer getId()
-    {
-        return id;
-    }
+    double getHealth();
 
-    public void setId(Integer id)
-    {
-        this.id = id;
-    }
+    int getFoodLevel();
 
-    @Override
-    public String getName()
-    {
-        return name;
-    }
+    int getXpLevel();
 
-    public void setName(String name)
-    {
-        this.name = name.toLowerCase();
-    }
+    float getXpProgress();
 
-    @Override
-    public double getHealth()
-    {
-        return health;
-    }
+    GameMode getGameMode();
 
-    public void setHealth(double health)
-    {
-        this.health = health;
-    }
+    String getPotionEffects();
 
-    public int getFoodLevel()
-    {
-        return foodLevel;
-    }
+    PlayerInventory getSurvivalInventory();
 
-    public void setFoodLevel(int foodLevel)
-    {
-        this.foodLevel = foodLevel;
-    }
+    PlayerInventory getCreativeInventory();
 
-    @Override
-    public int getXpLevel()
-    {
-        return xpLevel;
-    }
-
-    public void setXpLevel(int xpLevel)
-    {
-        this.xpLevel = xpLevel;
-    }
-
-    @Override
-    public float getXpProgress()
-    {
-        return xpProgress;
-    }
-
-    public void setXpProgress(float xpProgress)
-    {
-        this.xpProgress = xpProgress;
-    }
-
-    @Override
-    public int getGameMode()
-    {
-        return gameMode;
-    }
-
-    public void setGameMode(int gameMode)
-    {
-        this.gameMode = gameMode;
-    }
-
-    public void setGameMode(GameMode gameMode)
-    {
-        switch(gameMode)
-        {
-            default:
-            case SURVIVAL:
-                this.gameMode = PlayerEntry.SURVIVAL;
-                break;
-            case CREATIVE:
-                this.gameMode = PlayerEntry.CREATIVE;
-                break;
-            case ADVENTURE:
-                this.gameMode = PlayerEntry.ADVENTURE;
-                break;
-            case SPECTATOR:
-                this.gameMode = PlayerEntry.SPECTATOR;
-                break;
-        }
-    }
-
-    public String getPotionEffects()
-    {
-        return potionEffects;
-    }
-
-    public void setPotionEffects(String potionEffects)
-    {
-        this.potionEffects = potionEffects;
-    }
-
-    @Override
-    public ItemStack[] getArmor()
-    {
-        return armor;
-    }
-
-    public void setArmor(ItemStack[] armor)
-    {
-        this.armor = armor;
-    }
-
-    @Override
-    public ItemStack[] getSurvivalInventory()
-    {
-        return survivalInventory;
-    }
-
-    public void setSurvivalInventory(ItemStack[] survivalInventory)
-    {
-        this.survivalInventory = survivalInventory;
-    }
-
-    @Override
-    public ItemStack[] getCreativeInventory()
-    {
-        return creativeInventory;
-    }
-
-    public void setCreativeInventory(ItemStack[] creativeInventory)
-    {
-        this.creativeInventory = creativeInventory;
-    }
-
-    @Override
-    public ItemStack[] getEnderInventory()
-    {
-        return enderInventory;
-    }
-
-    public void setEnderInventory(ItemStack[] enderInventory)
-    {
-        this.enderInventory = enderInventory;
-    }
+    ItemStack[] getEnderInventory();
 }
