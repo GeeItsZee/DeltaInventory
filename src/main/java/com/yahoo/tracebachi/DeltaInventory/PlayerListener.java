@@ -54,6 +54,7 @@ public class PlayerListener implements Listener
     private DeltaInventoryPlugin plugin;
     private DeltaEssentialsPlugin essentialsPlugin;
     private GameMode forcedGameMode = null;
+    private boolean clearEffectsOnLogin;
 
     private HashMap<String, Integer> idMap = new HashMap<>(32);
     private HashSet<String> authenticated = new HashSet<>(32);
@@ -67,6 +68,7 @@ public class PlayerListener implements Listener
     {
         this.plugin = plugin;
         this.essentialsPlugin = essPlugin;
+        this.clearEffectsOnLogin = plugin.getConfig().getBoolean("ClearEffectsOnLogin", false);
 
         if(plugin.getConfig().getBoolean("ForcedGameMode.Enable", false))
         {
@@ -546,9 +548,12 @@ public class PlayerListener implements Listener
             player.removePotionEffect(existingEffect.getType());
         }
 
-        for(PotionEffect effect : PotionEffectUtils.deserialize(entry.getPotionEffects()))
+        if(!clearEffectsOnLogin)
         {
-            effect.apply(player);
+            for(PotionEffect effect : PotionEffectUtils.deserialize(entry.getPotionEffects()))
+            {
+                effect.apply(player);
+            }
         }
 
         if(entry.getEnderInventory() != null)
