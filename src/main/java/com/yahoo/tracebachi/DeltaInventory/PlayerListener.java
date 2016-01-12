@@ -28,8 +28,8 @@ import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerInventory;
 import de.luricos.bukkit.xAuth.event.command.player.xAuthCommandLoginEvent;
 import de.luricos.bukkit.xAuth.event.command.player.xAuthCommandRegisterEvent;
 import de.luricos.bukkit.xAuth.event.player.xAuthPlayerJoinEvent;
+import de.luricos.bukkit.xAuth.event.xAuthEvent;
 import de.luricos.bukkit.xAuth.event.xAuthEventProperties;
-import de.luricos.bukkit.xAuth.events.xAuthRegisterEvent;
 import de.luricos.bukkit.xAuth.xAuthPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -69,7 +69,7 @@ public class PlayerListener implements Listener
     {
         try
         {
-            propertiesField = xAuthCommandRegisterEvent.class.getDeclaredField("properties");
+            propertiesField = xAuthEvent.class.getDeclaredField("properties");
             propertiesField.setAccessible(true);
         }
         catch(NoSuchFieldException e)
