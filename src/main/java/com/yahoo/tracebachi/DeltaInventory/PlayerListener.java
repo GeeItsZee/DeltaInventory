@@ -26,7 +26,10 @@ import com.yahoo.tracebachi.DeltaInventory.Storage.ModifiablePlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerInventory;
 import de.luricos.bukkit.xAuth.event.command.player.xAuthCommandLoginEvent;
+import de.luricos.bukkit.xAuth.event.command.player.xAuthCommandRegisterEvent;
 import de.luricos.bukkit.xAuth.event.player.xAuthPlayerJoinEvent;
+import de.luricos.bukkit.xAuth.event.xAuthEventProperties;
+import de.luricos.bukkit.xAuth.events.xAuthRegisterEvent;
 import de.luricos.bukkit.xAuth.xAuthPlayer;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -42,6 +45,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffect;
 
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -53,6 +57,28 @@ import static com.yahoo.tracebachi.DeltaRedis.Spigot.Prefixes.INFO;
  */
 public class PlayerListener implements Listener
 {
+    /**
+     * xAuth 2.6.0 has an error in the source where the player name property is
+     * not accessible through any of the provided methods. Through reflection,
+     * the xAuthEventProperties of the xAuthCommandRegisterEvent will be read
+     * for the player name.
+     *
+     */
+    private static Field propertiesField;
+    static
+    {
+        try
+        {
+            propertiesField = xAuthCommandRegisterEvent.class.getDeclaredField("properties");
+            propertiesField.setAccessible(true);
+        }
+        catch(NoSuchFieldException e)
+        {
+            e.printStackTrace();
+            propertiesField = null;
+        }
+    }
+
     private DeltaInventoryPlugin plugin;
     private DeltaEssentialsPlugin deltaEssPlugin;
     private GameMode forcedGameMode;
@@ -296,6 +322,47 @@ public class PlayerListener implements Listener
     }
 
     /**
+     * Called when xAuth handles a player registration. Due to an error in the source
+     * of xAuth, the player name is not accessible.
+     *
+     * @param event Event to process
+     */
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onPlayerRegisterEvent(xAuthCommandRegisterEvent event)
+    {
+        try
+        {
+            String playerName = (String) ((xAuthEventProperties) propertiesField.get(event))
+                .getProperty("playername");
+
+            if(playerName == null) { return; }
+            playerName = playerName.toLowerCase();
+
+            if(authenticated.contains(playerName)) { return; }
+
+            if(event.getAction() == xAuthCommandRegisterEvent.Action.PLAYER_REGISTERED)
+            {
+                Player player = Bukkit.getPlayer(playerName);
+                if(player != null && player.isOnline())
+                {
+                    // Lock the inventory to prevent changes and add to authenticated
+                    String name = player.getName().toLowerCase();
+                    locked.add(name);
+                    authenticated.add(name);
+
+                    // Schedule an inventory load
+                    Integer id = idMap.get(name);
+                    plugin.loadInventory(name, id);
+                }
+            }
+        }
+        catch(IllegalAccessException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Handles cleanup and inventory saving on logout.
      *
      * Because server switching can also be a cause for PlayerQuitEvent, this
@@ -317,8 +384,8 @@ public class PlayerListener implements Listener
         ServerChangeRequest request = serverChangeRequests.remove(name);
         long currentTime = System.currentTimeMillis();
 
-        // If there is no request or the request "timed out" (after 3 seconds)
-        if(request == null || (currentTime - request.requestAt) > 3000)
+        // If there is no request or the request "timed out" (after 2 seconds)
+        if(request == null || (currentTime - request.requestAt) > 2000)
         {
             // Allow others plugins to modify inventory and players before saving
             PlayerPreSaveEvent preSaveEvent = new PlayerPreSaveEvent(player);
