@@ -18,11 +18,13 @@ package com.yahoo.tracebachi.DeltaInventory.Runnables;
 
 import com.google.common.base.Preconditions;
 import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
+import com.yahoo.tracebachi.DeltaInventory.Events.PlayerSavedEvent;
 import com.yahoo.tracebachi.DeltaInventory.Exceptions.InventorySaveException;
 import com.yahoo.tracebachi.DeltaInventory.InventoryUtils;
 import com.yahoo.tracebachi.DeltaInventory.PlayerListener;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -82,6 +84,7 @@ public class PlayerSaveUpdate implements Runnable
                 {
                     String name = entry.getName();
                     Integer id = entry.getId();
+                    plugin.debug("Saved inventory for {name:" + name + ", id:" + id + "}");
 
                     Bukkit.getScheduler().runTask(plugin, () ->
                         listener.onInventorySaved(name, id));
@@ -91,13 +94,18 @@ public class PlayerSaveUpdate implements Runnable
         catch(SQLException | IOException | InventorySaveException ex)
         {
             ex.printStackTrace();
-            Bukkit.getScheduler().runTask(plugin, () -> listener.onInventorySaveFailure(
-                entry.getName(), "Failed to save inventory! Do you have any " +
-                    "illegal items in your inventory?"));
+            plugin.debug("Failed to save inventory for {name:" + entry.getName() + "}");
+
+            Bukkit.getScheduler().runTask(plugin, () ->
+                listener.onInventorySaveFailure(entry.getName()));
         }
     }
 
-    public void runSyncForShutdown()
+    /**
+     * Performs a save synchronously on shutdown. This method should never be
+     * called asynchronously.
+     */
+    public void runForShutdown()
     {
         try(Connection connection = DeltaInventoryPlugin.dataSource.getConnection())
         {
@@ -119,16 +127,18 @@ public class PlayerSaveUpdate implements Runnable
                 {
                     String name = entry.getName();
                     Integer id = entry.getId();
+                    plugin.debug("Saved inventory for {name:" + name + ", id:" + id + "}");
 
-                    listener.onInventorySaved(name, id);
+                    Player player = Bukkit.getPlayer(name);
+                    PlayerSavedEvent event = new PlayerSavedEvent(name, player);
+                    Bukkit.getPluginManager().callEvent(event);
                 }
             }
         }
         catch(SQLException | IOException | InventorySaveException ex)
         {
             ex.printStackTrace();
-            listener.onInventorySaveFailure(entry.getName(),
-                "Failed to save inventory! Do you have any illegal items in your inventory?");
+            plugin.debug("Failed to save inventory for {name:" + entry.getName() + "}");
         }
     }
 }

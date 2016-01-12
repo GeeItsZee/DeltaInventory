@@ -36,6 +36,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryInteractEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerGameModeChangeEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
@@ -44,7 +45,8 @@ import org.bukkit.potion.PotionEffect;
 import java.util.HashMap;
 import java.util.HashSet;
 
-import static com.yahoo.tracebachi.DeltaRedis.Spigot.Prefixes.*;
+import static com.yahoo.tracebachi.DeltaRedis.Spigot.Prefixes.FAILURE;
+import static com.yahoo.tracebachi.DeltaRedis.Spigot.Prefixes.INFO;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
@@ -52,8 +54,8 @@ import static com.yahoo.tracebachi.DeltaRedis.Spigot.Prefixes.*;
 public class PlayerListener implements Listener
 {
     private DeltaInventoryPlugin plugin;
-    private DeltaEssentialsPlugin essentialsPlugin;
-    private GameMode forcedGameMode = null;
+    private DeltaEssentialsPlugin deltaEssPlugin;
+    private GameMode forcedGameMode;
     private boolean clearEffectsOnLogin;
 
     private HashMap<String, Integer> idMap = new HashMap<>(32);
@@ -67,13 +69,26 @@ public class PlayerListener implements Listener
     public PlayerListener(DeltaInventoryPlugin plugin, DeltaEssentialsPlugin essPlugin)
     {
         this.plugin = plugin;
-        this.essentialsPlugin = essPlugin;
+        this.deltaEssPlugin = essPlugin;
         this.clearEffectsOnLogin = plugin.getConfig().getBoolean("ClearEffectsOnLogin", false);
 
-        if(plugin.getConfig().getBoolean("ForcedGameMode.Enable", false))
+        switch(plugin.getConfig().getString("ForcedGameMode").toLowerCase())
         {
-            this.forcedGameMode = GameMode.valueOf(plugin.getConfig().getString(
-                "ForcedGameMode.GameMode"));
+            case "survival":
+                this.forcedGameMode = GameMode.SURVIVAL;
+                break;
+            case "creative":
+                this.forcedGameMode = GameMode.CREATIVE;
+                break;
+            case "adventure":
+                this.forcedGameMode = GameMode.ADVENTURE;
+                break;
+            case "spectator":
+                this.forcedGameMode = GameMode.SPECTATOR;
+                break;
+            default:
+                this.forcedGameMode = null;
+                break;
         }
     }
 
@@ -104,11 +119,15 @@ public class PlayerListener implements Listener
         }
 
         this.plugin = null;
-        this.essentialsPlugin = null;
+        this.deltaEssPlugin = null;
         this.locked.clear();
+        this.locked = null;
         this.idMap.clear();
+        this.idMap = null;
         this.serverChangeRequests.clear();
+        this.serverChangeRequests = null;
         this.inventoryMap.clear();
+        this.inventoryMap = null;
     }
 
     /**
@@ -121,10 +140,6 @@ public class PlayerListener implements Listener
     {
         Player player = Bukkit.getPlayer(entry.getName());
         String name = entry.getName();
-        PlayerLoadedEvent event = new PlayerLoadedEvent(name, player);
-
-        plugin.debug("Loaded inventory for {name:" + entry.getName() + ", id:" + entry.getId() + "}");
-        Bukkit.getPluginManager().callEvent(event);
 
         // Save the ID and remove the lock
         idMap.put(name, entry.getId());
@@ -133,7 +148,10 @@ public class PlayerListener implements Listener
         // If the player is online, apply the entry
         if(player != null && player.isOnline())
         {
-            copyFromEntry(player, entry);
+            loadFromEntry(player, entry);
+
+            PlayerLoadedEvent event = new PlayerLoadedEvent(name, player);
+            Bukkit.getPluginManager().callEvent(event);
         }
     }
 
@@ -150,20 +168,25 @@ public class PlayerListener implements Listener
     {
         Player player = Bukkit.getPlayer(name);
         ServerChangeRequest request = serverChangeRequests.get(name);
-        PlayerSavedEvent event = new PlayerSavedEvent(name, player);
 
-        plugin.debug("Saved inventory for {name:" + name + ", id:" + id + "}");
+        PlayerSavedEvent event = new PlayerSavedEvent(name, player);
         Bukkit.getPluginManager().callEvent(event);
 
         // Save the ID and remove the lock
         idMap.put(name, id);
-        locked.remove(name);
 
         // If there is a server change request, send to server without DeltaEssentials event
         if(player != null && player.isOnline() && request != null)
         {
+            // Send to server without PlayerServerSwitchEvent
             request.requestAt = System.currentTimeMillis();
-            essentialsPlugin.sendToServer(player, request.destination, false);
+            deltaEssPlugin.sendToServer(player, request.destination, false);
+        }
+        else
+        {
+            // Remove the lock
+            // Lock is not removed if there is a switch request
+            locked.remove(name);
         }
     }
 
@@ -176,18 +199,15 @@ public class PlayerListener implements Listener
      */
     public void onInventoryNotFound(String name)
     {
-        InventoryPair pair = new InventoryPair();
         Player player = Bukkit.getPlayer(name);
 
-        // Remove the lock
+        // Remove the lock and put an empty inventory pair by default
         locked.remove(name);
+        inventoryMap.put(name, new InventoryPair());
 
         // If the player is still online
         if(player != null && player.isOnline())
         {
-            PlayerLoadedEvent event = new PlayerLoadedEvent(name, player);
-            inventoryMap.put(name, pair);
-
             if(player.getGameMode() != GameMode.SURVIVAL)
             {
                 if(forcedGameMode != null)
@@ -198,7 +218,7 @@ public class PlayerListener implements Listener
                 player.setGameMode(GameMode.SURVIVAL);
             }
 
-            plugin.debug("No inventory found or loaded inventory for {name:" + name + "}");
+            PlayerLoadedEvent event = new PlayerLoadedEvent(name, player);
             Bukkit.getPluginManager().callEvent(event);
         }
     }
@@ -208,10 +228,8 @@ public class PlayerListener implements Listener
      *
      * @param name Name of the player whose inventory was not saved
      */
-    public void onInventorySaveFailure(String name, String message)
+    public void onInventorySaveFailure(String name)
     {
-        plugin.debug("Failed to save inventory for {name:" + name + "}");
-
         // Remove the lock
         locked.remove(name);
 
@@ -219,7 +237,8 @@ public class PlayerListener implements Listener
         Player player = Bukkit.getPlayer(name);
         if(player != null && player.isOnline())
         {
-            player.sendMessage(FAILURE + message);
+            player.sendMessage(FAILURE + "Failed to save inventory! Do you have any " +
+                "illegal items in your inventory?");
         }
     }
 
@@ -229,7 +248,7 @@ public class PlayerListener implements Listener
      *
      * @param event Event to process
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onCommandLoginEvent(xAuthCommandLoginEvent event)
     {
         if(event.getStatus() == xAuthPlayer.Status.AUTHENTICATED)
@@ -256,7 +275,7 @@ public class PlayerListener implements Listener
      *
      * @param event Event to process
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onPlayerJoinEvent(xAuthPlayerJoinEvent event)
     {
         if(event.getStatus() == xAuthPlayer.Status.AUTHENTICATED)
@@ -286,7 +305,7 @@ public class PlayerListener implements Listener
      *
      * @param event Event to process
      */
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = false)
     public void onPlayerQuit(PlayerQuitEvent event)
     {
         Player player = event.getPlayer();
@@ -298,8 +317,8 @@ public class PlayerListener implements Listener
         ServerChangeRequest request = serverChangeRequests.remove(name);
         long currentTime = System.currentTimeMillis();
 
-        // If there is no request or the request "timed out"
-        if(request == null || (currentTime - request.requestAt) > 2000)
+        // If there is no request or the request "timed out" (after 3 seconds)
+        if(request == null || (currentTime - request.requestAt) > 3000)
         {
             // Allow others plugins to modify inventory and players before saving
             PlayerPreSaveEvent preSaveEvent = new PlayerPreSaveEvent(player);
@@ -328,7 +347,7 @@ public class PlayerListener implements Listener
      *
      * @param event Event to process
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onPlayerServerSwitch(PlayerServerSwitchEvent event)
     {
         Player player = event.getPlayer();
@@ -368,7 +387,7 @@ public class PlayerListener implements Listener
      *
      * @param event Event to process
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onPlayerGameModeChange(PlayerGameModeChangeEvent event)
     {
         Player player = event.getPlayer();
@@ -378,17 +397,16 @@ public class PlayerListener implements Listener
         // Ignore game mode changes where the game modes are the same
         if(originalMode == event.getNewGameMode()) { return; }
 
-        // Ignore players that have the single inventory permission
-        if(player.hasPermission("DeltaInv.SingleInv")) { return; }
-
         // Ignore if player was never authenticated
         if(!authenticated.contains(name)) { return; }
+
+        // Ignore players that have the single inventory permission
+        if(player.hasPermission("DeltaInv.SingleInv")) { return; }
 
         // Prevent game mode change during saves
         if(locked.contains(name))
         {
-            player.sendMessage(FAILURE + "Not allowed to change game modes while " +
-                "inventory is being saved or loaded.");
+            player.sendMessage(FAILURE + "Not allowed to change game modes while inventory is locked.");
             event.setCancelled(true);
             return;
         }
@@ -403,9 +421,7 @@ public class PlayerListener implements Listener
         }
 
         InventoryPair pair = inventoryMap.get(name);
-        PlayerInventory inventory = new PlayerInventory(
-            player.getInventory().getArmorContents(),
-            player.getInventory().getContents());
+        PlayerInventory inventory = new PlayerInventory(player);
 
         // Save the old
         if(originalMode == GameMode.SURVIVAL)
@@ -450,7 +466,7 @@ public class PlayerListener implements Listener
      *
      * @param event Event to process
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onInventoryOpen(InventoryOpenEvent event)
     {
         String name = event.getPlayer().getName().toLowerCase();
@@ -470,7 +486,7 @@ public class PlayerListener implements Listener
      *
      * @param event Event to process
      */
-    @EventHandler
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onInventoryInteract(InventoryInteractEvent event)
     {
         String name = event.getWhoClicked().getName().toLowerCase();
@@ -482,12 +498,31 @@ public class PlayerListener implements Listener
         }
     }
 
+    /**
+     * Handles players interacting with inventories while waiting for their
+     * inventory to load or save. This prevents a player from abusing the time
+     * period where they are waiting for their inventory and player information
+     * to save (which is usually less than a second).
+     *
+     * @param event Event to process
+     */
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    public void onInventoryDropEvent(PlayerDropItemEvent event)
+    {
+        Player player = event.getPlayer();
+        String name = player.getName().toLowerCase();
+
+        if(locked.contains(name))
+        {
+            player.sendMessage(INFO + "Your inventory is locked. Wait until it is loaded.");
+            event.setCancelled(true);
+        }
+    }
+
     private PlayerEntry createPlayerEntry(Player player, InventoryPair pair)
     {
         ModifiablePlayerEntry entry = new ModifiablePlayerEntry();
-        PlayerInventory inventory = new PlayerInventory(
-            player.getInventory().getArmorContents(),
-            player.getInventory().getContents());
+        PlayerInventory inventory = new PlayerInventory(player);
 
         entry.setId(idMap.get(player.getName().toLowerCase()));
         entry.setName(player.getName());
@@ -533,7 +568,7 @@ public class PlayerListener implements Listener
         return entry;
     }
 
-    private void copyFromEntry(Player player, PlayerEntry entry)
+    private void loadFromEntry(Player player, PlayerEntry entry)
     {
         InventoryPair pair = new InventoryPair();
         String name = player.getName().toLowerCase();

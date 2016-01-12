@@ -20,7 +20,6 @@ import com.yahoo.tracebachi.DeltaEssentials.DeltaEssentialsPlugin;
 import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerLoad;
 import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerSaveInsert;
 import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerSaveUpdate;
-import com.yahoo.tracebachi.DeltaInventory.Storage.ModifiablePlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -145,13 +144,13 @@ public class DeltaInventoryPlugin extends JavaPlugin
         {
             PlayerSaveInsert runnable = new PlayerSaveInsert(entry, listener, this);
             debug("Saving inventory sync for {name:" + entry.getName() + ", id: N/A}" );
-            runnable.runSyncForShutdown();
+            runnable.runForShutdown();
         }
         else
         {
             PlayerSaveUpdate runnable = new PlayerSaveUpdate(entry, listener, this);
             debug("Saving inventory sync for {name:" + entry.getName() + ", id:" + entry.getId() + "}" );
-            runnable.runSyncForShutdown();
+            runnable.runForShutdown();
         }
     }
 

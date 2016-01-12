@@ -53,11 +53,6 @@ public class PlayerLoad implements Runnable
     private final PlayerListener listener;
     private final DeltaInventoryPlugin plugin;
 
-    public PlayerLoad(String name, PlayerListener listener, DeltaInventoryPlugin plugin)
-    {
-        this(name, null, listener, plugin);
-    }
-
     public PlayerLoad(String name, Integer id, PlayerListener listener, DeltaInventoryPlugin plugin)
     {
         Preconditions.checkNotNull(plugin, "Plugin cannot be null.");
@@ -102,6 +97,8 @@ public class PlayerLoad implements Runnable
         catch(SQLException | InvalidConfigurationException | IOException ex)
         {
             ex.printStackTrace();
+            plugin.debug("No inventory found or loaded inventory for {name:" + name + "}");
+
             Bukkit.getScheduler().runTask(plugin, () -> listener.onInventoryNotFound(name));
         }
     }
@@ -112,10 +109,13 @@ public class PlayerLoad implements Runnable
         if(resultSet.next())
         {
             ModifiablePlayerEntry entry = getEntryFromResultSet(resultSet);
+
+            plugin.debug("Loaded inventory for {name:" + entry.getName() + ", id:" + entry.getId() + "}");
             Bukkit.getScheduler().runTask(plugin, () -> listener.onInventoryLoaded(entry));
         }
         else
         {
+            plugin.debug("No inventory found for {name:" + name + "}");
             Bukkit.getScheduler().runTask(plugin, () -> listener.onInventoryNotFound(name));
         }
     }
