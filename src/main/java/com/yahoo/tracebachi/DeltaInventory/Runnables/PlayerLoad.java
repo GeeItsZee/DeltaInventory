@@ -18,9 +18,10 @@ package com.yahoo.tracebachi.DeltaInventory.Runnables;
 
 import com.google.common.base.Preconditions;
 import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
-import com.yahoo.tracebachi.DeltaInventory.InventoryUtils;
-import com.yahoo.tracebachi.DeltaInventory.PlayerListener;
-import com.yahoo.tracebachi.DeltaInventory.Storage.ModifiablePlayerEntry;
+import com.yahoo.tracebachi.DeltaInventory.Listeners.PlayerListener;
+import com.yahoo.tracebachi.DeltaInventory.Storage.IPlayerEntry;
+import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
+import com.yahoo.tracebachi.DeltaInventory.Utils.InventoryUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.configuration.InvalidConfigurationException;
@@ -39,15 +40,15 @@ public class PlayerLoad implements Runnable
     private static final String SELECT_BY_NAME =
         " SELECT id, name, health, hunger, xp_level, xp_progress, gamemode, effects, items" +
         " FROM deltainventory" +
-        " WHERE name=?" +
+        " WHERE name = ?" +
         " LIMIT 1;";
-
     private static final String SELECT_BY_ID =
         " SELECT id, name, health, hunger, xp_level, xp_progress, gamemode, effects, items" +
         " FROM deltainventory" +
-        " WHERE id=?" +
+        " WHERE id = ?" +
         " LIMIT 1;";
 
+    private final boolean isRunningSync;
     private final String name;
     private final Integer id;
     private final PlayerListener listener;
@@ -55,13 +56,21 @@ public class PlayerLoad implements Runnable
 
     public PlayerLoad(String name, Integer id, PlayerListener listener, DeltaInventoryPlugin plugin)
     {
-        Preconditions.checkNotNull(plugin, "Plugin cannot be null.");
+        this(name, id, listener, plugin, false);
+    }
+
+    public PlayerLoad(String name, Integer id, PlayerListener listener, DeltaInventoryPlugin plugin,
+        boolean isRunningSync)
+    {
         Preconditions.checkNotNull(name, "Name cannot be null.");
+        Preconditions.checkNotNull(listener, "Listener cannot be null.");
+        Preconditions.checkNotNull(plugin, "Plugin cannot be null.");
 
         this.name = name.toLowerCase();
         this.id = id;
         this.listener = listener;
         this.plugin = plugin;
+        this.isRunningSync = isRunningSync;
     }
 
     @Override
@@ -74,10 +83,17 @@ public class PlayerLoad implements Runnable
                 try(PreparedStatement statement = connection.prepareStatement(SELECT_BY_NAME))
                 {
                     statement.setString(1, name);
-
                     try(ResultSet resultSet = statement.executeQuery())
                     {
-                        handleResultSet(resultSet);
+                        if(resultSet.next())
+                        {
+                            IPlayerEntry entry = getEntryFromResultSet(resultSet);
+                            onSuccess(entry);
+                        }
+                        else
+                        {
+                            onNotFoundFailure();
+                        }
                     }
                 }
             }
@@ -86,10 +102,17 @@ public class PlayerLoad implements Runnable
                 try(PreparedStatement statement = connection.prepareStatement(SELECT_BY_ID))
                 {
                     statement.setInt(1, id);
-
                     try(ResultSet resultSet = statement.executeQuery())
                     {
-                        handleResultSet(resultSet);
+                        if(resultSet.next())
+                        {
+                            IPlayerEntry entry = getEntryFromResultSet(resultSet);
+                            onSuccess(entry);
+                        }
+                        else
+                        {
+                            onNotFoundFailure();
+                        }
                     }
                 }
             }
@@ -97,36 +120,17 @@ public class PlayerLoad implements Runnable
         catch(SQLException | InvalidConfigurationException | IOException ex)
         {
             ex.printStackTrace();
-            plugin.debug("No inventory found or loaded inventory for {name:" + name + "}");
-
-            Bukkit.getScheduler().runTask(plugin, () -> listener.onInventoryNotFound(name));
+            onLoadFailure();
         }
     }
 
-    private void handleResultSet(ResultSet resultSet) throws
+    private IPlayerEntry getEntryFromResultSet(ResultSet resultSet) throws
         SQLException, InvalidConfigurationException, IOException
     {
-        if(resultSet.next())
-        {
-            ModifiablePlayerEntry entry = getEntryFromResultSet(resultSet);
+        Integer id = resultSet.getInt("id");
+        String name = resultSet.getString("name");
+        PlayerEntry entry = new PlayerEntry(id, name);
 
-            plugin.debug("Loaded inventory for {name:" + entry.getName() + ", id:" + entry.getId() + "}");
-            Bukkit.getScheduler().runTask(plugin, () -> listener.onInventoryLoaded(entry));
-        }
-        else
-        {
-            plugin.debug("No inventory found for {name:" + name + "}");
-            Bukkit.getScheduler().runTask(plugin, () -> listener.onInventoryNotFound(name));
-        }
-    }
-
-    private ModifiablePlayerEntry getEntryFromResultSet(ResultSet resultSet) throws
-        SQLException, InvalidConfigurationException, IOException
-    {
-        ModifiablePlayerEntry entry = new ModifiablePlayerEntry();
-
-        entry.setId(resultSet.getInt("id"));
-        entry.setName(resultSet.getString("name"));
         entry.setHealth(resultSet.getDouble("health"));
         entry.setFoodLevel(resultSet.getInt("hunger"));
         entry.setXpLevel(resultSet.getInt("xp_level"));
@@ -137,5 +141,51 @@ public class PlayerLoad implements Runnable
         byte[] itemBytes = resultSet.getBytes("items");
         InventoryUtils.deserialize(itemBytes, entry);
         return entry;
+    }
+
+    private void onSuccess(IPlayerEntry entry)
+    {
+        plugin.debug("Loaded inventory for {name:" + entry.getName() +
+            ", id:" + entry.getId() + "}");
+
+        if(isRunningSync)
+        {
+            listener.onInventoryLoaded(entry);
+        }
+        else
+        {
+            Bukkit.getScheduler().runTask(plugin,
+                () -> listener.onInventoryLoaded(entry));
+        }
+    }
+
+    private void onLoadFailure()
+    {
+        plugin.debug("Inventory could not be loaded for {name:" + name + "}");
+
+        if(isRunningSync)
+        {
+            listener.onInventoryLoadFailure(name);
+        }
+        else
+        {
+            Bukkit.getScheduler().runTask(plugin,
+                () -> listener.onInventoryLoadFailure(name));
+        }
+    }
+
+    private void onNotFoundFailure()
+    {
+        plugin.debug("No inventory found for {name:" + name + "}");
+
+        if(isRunningSync)
+        {
+            listener.onInventoryNotFound(name);
+        }
+        else
+        {
+            Bukkit.getScheduler().runTask(plugin,
+                () -> listener.onInventoryNotFound(name));
+        }
     }
 }

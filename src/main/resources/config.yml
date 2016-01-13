@@ -3,10 +3,16 @@
 # DeltaEssentials Database name
 Database: Main
 
-# Forced Gamemode settings
-# Set to SURVIVAL, CREATIVE, ADVENTURE, or SPECTATOR to enable a forced gamemode.
-# Set to NONE to disable a forced gamemode.
-# Add "DeltaInv.ForcedGameMode.Bypass" to ignore forced gamemode.
+# Players are not allowed to switch to these gamemodes unless they have the bypass permission.
+# Options: SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR
+# Permission example: DeltaInv.Disabled.Bypass.SPECTATOR
+DisabledGameModes:
+- ADVENTURE
+- SPECTATOR
+
+# Gamemode that players will be forced into when joining this server.
+# Options: SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR, NONE
+# Permission example: DeltaInv.Forced.Bypass
 ForcedGameMode: NONE
 
 # Should all effects be cleared when logging into the server?

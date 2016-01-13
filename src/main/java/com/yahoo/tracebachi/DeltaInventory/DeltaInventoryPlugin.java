@@ -17,14 +17,11 @@
 package com.yahoo.tracebachi.DeltaInventory;
 
 import com.yahoo.tracebachi.DeltaEssentials.DeltaEssentialsPlugin;
-import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerLoad;
-import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerSaveInsert;
-import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerSaveUpdate;
-import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
+import com.yahoo.tracebachi.DeltaInventory.Listeners.InventoryLockListener;
+import com.yahoo.tracebachi.DeltaInventory.Listeners.PlayerListener;
 import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -51,16 +48,14 @@ public class DeltaInventoryPlugin extends JavaPlugin
         " )";
 
     private boolean debugMode;
-    private PlayerListener listener;
+    private String databaseName;
+    private PlayerListener playerListener;
+    private InventoryLockListener inventoryLockListener;
 
     @Override
     public void onLoad()
     {
-        File file = new File(getDataFolder(), "config.yml");
-        if(!file.exists())
-        {
-            saveDefaultConfig();
-        }
+        saveDefaultConfig();
     }
 
     @Override
@@ -68,10 +63,10 @@ public class DeltaInventoryPlugin extends JavaPlugin
     {
         reloadConfig();
         debugMode = getConfig().getBoolean("DebugMode", false);
-        String databaseName = getConfig().getString("Database");
+        databaseName = getConfig().getString("Database");
 
-        DeltaEssentialsPlugin dePlugin = (DeltaEssentialsPlugin) getServer().getPluginManager()
-            .getPlugin("DeltaEssentials");
+        DeltaEssentialsPlugin dePlugin = (DeltaEssentialsPlugin) getServer()
+            .getPluginManager().getPlugin("DeltaEssentials");
 
         dataSource = dePlugin.getDataSource(databaseName);
         if(dataSource == null)
@@ -88,20 +83,33 @@ public class DeltaInventoryPlugin extends JavaPlugin
             return;
         }
 
-        listener = new PlayerListener(this, dePlugin);
-        getServer().getPluginManager().registerEvents(listener, this);
+        inventoryLockListener = new InventoryLockListener();
+        getServer().getPluginManager().registerEvents(inventoryLockListener, this);
+        playerListener = new PlayerListener(dePlugin, inventoryLockListener, this);
+        getServer().getPluginManager().registerEvents(playerListener, this);
     }
 
     @Override
     public void onDisable()
     {
-        if(listener != null)
+        if(playerListener != null)
         {
-            listener.shutdown();
-            listener = null;
+            playerListener.shutdown();
+            playerListener = null;
+        }
+
+        if(inventoryLockListener != null)
+        {
+            inventoryLockListener.shutdown();
+            inventoryLockListener = null;
         }
 
         dataSource = null;
+    }
+
+    public String getDatabaseName()
+    {
+        return databaseName;
     }
 
     public void info(String message)
@@ -122,58 +130,17 @@ public class DeltaInventoryPlugin extends JavaPlugin
         }
     }
 
-    public void saveInventory(PlayerEntry entry)
-    {
-        if(entry.getId() == null)
-        {
-            PlayerSaveInsert runnable = new PlayerSaveInsert(entry, listener, this);
-            getServer().getScheduler().runTaskAsynchronously(this, runnable);
-            debug("Saving inventory async for {name:" + entry.getName() + ", id: N/A}" );
-        }
-        else
-        {
-            PlayerSaveUpdate runnable = new PlayerSaveUpdate(entry, listener, this);
-            getServer().getScheduler().runTaskAsynchronously(this, runnable);
-            debug("Saving inventory async for {name:" + entry.getName() + ", id:" + entry.getId() + "}" );
-        }
-    }
-
-    public void saveInventoryForShutdown(PlayerEntry entry)
-    {
-        if(entry.getId() == null)
-        {
-            PlayerSaveInsert runnable = new PlayerSaveInsert(entry, listener, this);
-            debug("Saving inventory sync for {name:" + entry.getName() + ", id: N/A}" );
-            runnable.runForShutdown();
-        }
-        else
-        {
-            PlayerSaveUpdate runnable = new PlayerSaveUpdate(entry, listener, this);
-            debug("Saving inventory sync for {name:" + entry.getName() + ", id:" + entry.getId() + "}" );
-            runnable.runForShutdown();
-        }
-    }
-
-    public void loadInventory(String name, Integer id)
-    {
-        PlayerLoad runnable = new PlayerLoad(name, id, listener, this);
-        getServer().getScheduler().runTaskAsynchronously(this, runnable);
-        debug("Loading inventory async for {name:" + name + ", id:" + id + "}" );
-    }
-
     private boolean setupTable()
     {
         try(Connection connection = dataSource.getConnection())
         {
             try(Statement statement = connection.createStatement())
             {
-                info("Creating Table ...");
+                info("Creating `deltainventory` table ...");
                 statement.executeUpdate(CREATE_TABLE_STATEMENT);
-                info("................... Done");
-                statement.close();
+                info("Creating `deltainventory` table ... Done");
+                return true;
             }
-            connection.close();
-            return true;
         }
         catch(SQLException ex)
         {

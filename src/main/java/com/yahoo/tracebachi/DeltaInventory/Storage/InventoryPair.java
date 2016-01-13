@@ -16,50 +16,30 @@
  */
 package com.yahoo.tracebachi.DeltaInventory.Storage;
 
-import org.bukkit.inventory.ItemStack;
-
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
 public class InventoryPair
 {
-    private PlayerInventory survival;
-    private PlayerInventory creative;
+    private SavedInventory survival;
+    private SavedInventory creative;
 
-    public boolean hasSurvival()
+    public SavedInventory getSurvival()
     {
-        return survival != null;
+        return (survival != null) ? survival : SavedInventory.EMPTY;
     }
 
-    public PlayerInventory getSurvival()
-    {
-        if(survival == null)
-        {
-            return new PlayerInventory(new ItemStack[4], new ItemStack[36]);
-        }
-        return survival;
-    }
-
-    public void setSurvival(PlayerInventory survival)
+    public void setSurvival(SavedInventory survival)
     {
         this.survival = survival;
     }
 
-    public boolean hasCreative()
+    public SavedInventory getCreative()
     {
-        return creative != null;
+        return (creative != null) ? creative : SavedInventory.EMPTY;
     }
 
-    public PlayerInventory getCreative()
-    {
-        if(creative == null)
-        {
-            return new PlayerInventory(new ItemStack[4], new ItemStack[36]);
-        }
-        return creative;
-    }
-
-    public void setCreative(PlayerInventory creative)
+    public void setCreative(SavedInventory creative)
     {
         this.creative = creative;
     }

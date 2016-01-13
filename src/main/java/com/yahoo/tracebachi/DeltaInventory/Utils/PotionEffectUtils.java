@@ -1,4 +1,4 @@
-package com.yahoo.tracebachi.DeltaInventory;
+package com.yahoo.tracebachi.DeltaInventory.Utils;
 
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;

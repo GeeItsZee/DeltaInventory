@@ -16,33 +16,141 @@
  */
 package com.yahoo.tracebachi.DeltaInventory.Storage;
 
+import com.google.common.base.Preconditions;
 import org.bukkit.GameMode;
 import org.bukkit.inventory.ItemStack;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
-public interface PlayerEntry
+public class PlayerEntry implements IPlayerEntry
 {
-    Integer getId();
+    private final Integer id;
+    private final String name;
+    private double health;
+    private int foodLevel;
+    private int xpLevel;
+    private float xpProgress;
+    private GameMode gameMode;
+    private String potionEffects;
+    private SavedInventory survival;
+    private SavedInventory creative;
+    private ItemStack[] enderChest;
 
-    String getName();
+    public PlayerEntry(Integer id, String name)
+    {
+        Preconditions.checkNotNull(name, "Name cannot be null.");
+        this.id = id;
+        this.name = name;
+    }
 
-    double getHealth();
+    @Override
+    public Integer getId()
+    {
+        return id;
+    }
 
-    int getFoodLevel();
+    @Override
+    public String getName()
+    {
+        return name;
+    }
 
-    int getXpLevel();
+    @Override
+    public double getHealth()
+    {
+        return health;
+    }
 
-    float getXpProgress();
+    public void setHealth(double health)
+    {
+        this.health = health;
+    }
 
-    GameMode getGameMode();
+    @Override
+    public int getFoodLevel()
+    {
+        return foodLevel;
+    }
 
-    String getPotionEffects();
+    public void setFoodLevel(int foodLevel)
+    {
+        this.foodLevel = foodLevel;
+    }
 
-    PlayerInventory getSurvivalInventory();
+    @Override
+    public int getXpLevel()
+    {
+        return xpLevel;
+    }
 
-    PlayerInventory getCreativeInventory();
+    public void setXpLevel(int xpLevel)
+    {
+        this.xpLevel = xpLevel;
+    }
 
-    ItemStack[] getEnderInventory();
+    @Override
+    public float getXpProgress()
+    {
+        return xpProgress;
+    }
+
+    public void setXpProgress(float xpProgress)
+    {
+        this.xpProgress = xpProgress;
+    }
+
+    @Override
+    public GameMode getGameMode()
+    {
+        return gameMode;
+    }
+
+    public void setGameMode(GameMode gameMode)
+    {
+        this.gameMode = gameMode;
+    }
+
+    public String getPotionEffects()
+    {
+        return potionEffects;
+    }
+
+    public void setPotionEffects(String potionEffects)
+    {
+        this.potionEffects = potionEffects;
+    }
+
+    @Override
+    public SavedInventory getSurvival()
+    {
+        return (survival != null) ? survival : SavedInventory.EMPTY;
+    }
+
+    public void setSurvival(SavedInventory survival)
+    {
+        this.survival = survival;
+    }
+
+    @Override
+    public SavedInventory getCreative()
+    {
+        return (creative != null) ? creative : SavedInventory.EMPTY;
+    }
+
+    public void setCreative(SavedInventory creative)
+    {
+        this.creative = creative;
+    }
+
+    @Override
+    public ItemStack[] getEnderChest()
+    {
+        return (enderChest != null) ? enderChest : new ItemStack[27];
+    }
+
+    public void setEnderChest(ItemStack[] enderChest)
+    {
+        this.enderChest = enderChest;
+    }
 }

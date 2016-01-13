@@ -16,35 +16,33 @@
  */
 package com.yahoo.tracebachi.DeltaInventory.Storage;
 
-import org.bukkit.entity.Player;
+import org.bukkit.GameMode;
 import org.bukkit.inventory.ItemStack;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
-public class PlayerInventory
+public interface IPlayerEntry
 {
-    private ItemStack[] armor;
-    private ItemStack[] contents;
+    Integer getId();
 
-    public PlayerInventory(Player player)
-    {
-        this(player.getInventory().getArmorContents(), player.getInventory().getContents());
-    }
+    String getName();
 
-    public PlayerInventory(ItemStack[] armor, ItemStack[] contents)
-    {
-        this.armor = armor;
-        this.contents = contents;
-    }
+    double getHealth();
 
-    public ItemStack[] getArmor()
-    {
-        return armor;
-    }
+    int getFoodLevel();
 
-    public ItemStack[] getContents()
-    {
-        return contents;
-    }
+    int getXpLevel();
+
+    float getXpProgress();
+
+    GameMode getGameMode();
+
+    String getPotionEffects();
+
+    SavedInventory getSurvival();
+
+    SavedInventory getCreative();
+
+    ItemStack[] getEnderChest();
 }
