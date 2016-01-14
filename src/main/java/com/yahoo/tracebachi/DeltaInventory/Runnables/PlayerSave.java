@@ -100,7 +100,7 @@ public class PlayerSave implements Runnable
                 {
                     // Since ID was not found, use an INSERT
                     foundId = insertPlayer(connection);
-                    success = (foundId == null);
+                    success = (foundId != null);
                 }
             }
 
