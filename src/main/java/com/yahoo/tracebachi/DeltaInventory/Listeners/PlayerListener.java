@@ -486,7 +486,7 @@ public class PlayerListener implements Listener
         // Prevent game mode changes unless there is no forced game mode or player is exempt
         if(forcedGameMode != null)
         {
-            if(!isIgnoringChangeOnce && !player.hasPermission("DeltaInv.ForcedGameMode.Bypass"))
+            if(!isIgnoringChangeOnce && !player.hasPermission("DeltaInv.Forced.Bypass"))
             {
                 player.sendMessage(FAILURE + "Game mode is being forced. You are not allowed to change it.");
                 event.setCancelled(true);
