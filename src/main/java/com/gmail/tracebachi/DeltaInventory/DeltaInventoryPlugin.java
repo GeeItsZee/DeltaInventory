@@ -44,18 +44,13 @@ public class DeltaInventoryPlugin extends JavaPlugin
     {
         reloadConfig();
         debugMode = getConfig().getBoolean("DebugMode", false);
-        playerDataFolder = getConfig().getString("PlayerDataFolder");
-
-        if(playerDataFolder == null || playerDataFolder.trim().equals(""))
-        {
-            playerDataFolder = getDataFolder() + File.separator +
-                "PlayerData" + File.separator;
-        }
+        playerDataFolder = getConfig().getString("PlayerDataFolder", getDataFolder() +
+            File.separator + "PlayerData" + File.separator);
 
         File file = new File(playerDataFolder);
         if(!file.exists() && !file.mkdirs())
         {
-            severe("Failed to create neccesary directories! Shutting down ...");
+            severe("Failed to create necessary directories! Shutting down ...");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }

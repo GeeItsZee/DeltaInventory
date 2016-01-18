@@ -16,7 +16,10 @@
  */
 package com.gmail.tracebachi.DeltaInventory.Listeners;
 
+import com.gmail.tracebachi.DeltaInventory.DeltaInventoryPlugin;
+import com.gmail.tracebachi.DeltaInventory.Events.PlayerLoadedEvent;
 import com.gmail.tracebachi.DeltaInventory.Events.PlayerPreSaveEvent;
+import com.gmail.tracebachi.DeltaInventory.Events.PlayerSavedEvent;
 import com.gmail.tracebachi.DeltaInventory.Runnables.PlayerLoad;
 import com.gmail.tracebachi.DeltaInventory.Runnables.PlayerSave;
 import com.gmail.tracebachi.DeltaInventory.Storage.IPlayerEntry;
@@ -25,9 +28,6 @@ import com.gmail.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import com.gmail.tracebachi.DeltaInventory.Storage.SavedInventory;
 import com.yahoo.tracebachi.DeltaEssentials.DeltaEssentialsPlugin;
 import com.yahoo.tracebachi.DeltaEssentials.Events.PlayerServerSwitchEvent;
-import com.gmail.tracebachi.DeltaInventory.DeltaInventoryPlugin;
-import com.gmail.tracebachi.DeltaInventory.Events.PlayerLoadedEvent;
-import com.gmail.tracebachi.DeltaInventory.Events.PlayerSavedEvent;
 import de.luricos.bukkit.xAuth.event.command.player.xAuthCommandLoginEvent;
 import de.luricos.bukkit.xAuth.event.command.player.xAuthCommandRegisterEvent;
 import de.luricos.bukkit.xAuth.event.player.xAuthPlayerJoinEvent;
