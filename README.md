@@ -1,9 +1,10 @@
 # DeltaInventory
-DeltaInventory is an inventory synchronization plugin for Bukkit / Spigot using BungeeCord. It 
-uses MySQL for storing player inventories and DeltaEssentials for server switching.
+DeltaInventory is an inventory synchronization plugin for Bukkit / Spigot using BungeeCord. It
+relies on DeltaEssential's ServerSwitchEvent to save inventories before players switch which
+guarantees that data will be ready and up-to-date when they arrive at their destination server.
 
 ## Features
-- Storage of inventories in MySQL database
+- Storage of inventories in YML files that can be shared between servers through soft links
 - Bukkit/Spigot's version compatible ItemStack serialization
 - Async inventory loading and saving
 
