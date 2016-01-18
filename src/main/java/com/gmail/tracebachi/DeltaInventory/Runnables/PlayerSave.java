@@ -113,8 +113,8 @@ public class PlayerSave implements Runnable
         serialized = InventoryUtils.toYamlSection(entry.getCreative().getArmor());
         configuration.set("Creative.Armor", serialized);
 
-        serialized = InventoryUtils.toYamlSection(entry.getCreative().getArmor());
-        configuration.set("Creative.Armor", serialized);
+        serialized = InventoryUtils.toYamlSection(entry.getCreative().getContents());
+        configuration.set("Creative.Contents", serialized);
 
         serialized = InventoryUtils.toYamlSection(entry.getEnderChest());
         configuration.set("EnderChest", serialized);

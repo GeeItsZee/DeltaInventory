@@ -1,8 +1,7 @@
 # DeltaInventory Configuration File
 
 # File path to the player data folder
-# If the path is ' ', the plugin's data folder (.../plugins/DeltaInventory/PlayerData/) will be used
-PlayerDataFolder: ' '
+PlayerDataFolder: 'plugins/DeltaInventory/PlayerData/'
 
 # Players are not allowed to switch to these gamemodes unless they have the bypass permission.
 # Options: SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR
