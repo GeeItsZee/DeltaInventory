@@ -163,7 +163,7 @@ public class PlayerSave implements Runnable
             File file = path.toFile();
             File directory = file.getParentFile();
 
-            if(!directory.exists() && !directory.mkdirs())
+            if(directory != null && !directory.exists() && !directory.mkdirs())
             {
                 return false;
             }
@@ -175,11 +175,13 @@ public class PlayerSave implements Runnable
 
             FileChannel fileChannel = FileChannel.open(path,
                 StandardOpenOption.READ, StandardOpenOption.WRITE);
+            ByteBuffer buffer = ByteBuffer.wrap(source.getBytes(StandardCharsets.UTF_16));
 
             // Lock the file
             lock = fileChannel.lock();
 
-            ByteBuffer buffer = ByteBuffer.wrap(source.getBytes(StandardCharsets.UTF_16));
+            // Truncate the file (delete the current contents)
+            fileChannel.truncate(0);
             fileChannel.write(buffer);
 
             // Unlock the file
