@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with DeltaInventory.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yahoo.tracebachi.DeltaInventory.Runnables;
+package com.gmail.tracebachi.DeltaInventory.Runnables;
 
+import com.gmail.tracebachi.DeltaInventory.Storage.IPlayerEntry;
 import com.google.common.base.Preconditions;
-import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
-import com.yahoo.tracebachi.DeltaInventory.Listeners.PlayerListener;
-import com.yahoo.tracebachi.DeltaInventory.Storage.IPlayerEntry;
-import com.yahoo.tracebachi.DeltaInventory.Utils.InventoryUtils;
-import com.yahoo.tracebachi.DeltaInventory.Utils.PotionEffectUtils;
+import com.gmail.tracebachi.DeltaInventory.DeltaInventoryPlugin;
+import com.gmail.tracebachi.DeltaInventory.Listeners.PlayerListener;
+import com.gmail.tracebachi.DeltaInventory.Utils.InventoryUtils;
+import com.gmail.tracebachi.DeltaInventory.Utils.PotionEffectUtils;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
@@ -35,7 +35,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 /**
- * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
+ * Created by Trace Bachi (tracebachi@gmail.com, BigBossZee) on 12/12/15.
  */
 public class PlayerSave implements Runnable
 {

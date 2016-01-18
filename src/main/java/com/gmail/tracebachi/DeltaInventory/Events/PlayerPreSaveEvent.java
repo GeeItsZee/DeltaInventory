@@ -14,33 +14,39 @@
  * You should have received a copy of the GNU General Public License
  * along with DeltaInventory.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yahoo.tracebachi.DeltaInventory.Storage;
+package com.gmail.tracebachi.DeltaInventory.Events;
+
+import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
 
 /**
- * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
+ * Created by Trace Bachi (tracebachi@gmail.com, BigBossZee) on 12/12/15.
  */
-public class InventoryPair
+public class PlayerPreSaveEvent extends Event
 {
-    private SavedInventory survival;
-    private SavedInventory creative;
+    private static final HandlerList handlers = new HandlerList();
 
-    public SavedInventory getSurvival()
+    private final Player player;
+
+    public PlayerPreSaveEvent(Player player)
     {
-        return (survival != null) ? survival : SavedInventory.EMPTY;
+        this.player = player;
     }
 
-    public void setSurvival(SavedInventory survival)
+    public Player getPlayer()
     {
-        this.survival = survival;
+        return player;
     }
 
-    public SavedInventory getCreative()
+    @Override
+    public HandlerList getHandlers()
     {
-        return (creative != null) ? creative : SavedInventory.EMPTY;
+        return handlers;
     }
 
-    public void setCreative(SavedInventory creative)
+    public static HandlerList getHandlerList()
     {
-        this.creative = creative;
+        return handlers;
     }
 }

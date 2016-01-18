@@ -11,7 +11,7 @@ guarantees that data will be ready and up-to-date when they arrive at their dest
 # Licence ([GPLv3](http://www.gnu.org/licenses/gpl-3.0.en.html))
 ```
 DeltaInventory - Basic server functionality for Bukkit/Spigot servers using BungeeCord.
-Copyright (C) 2015  Trace Bachi (tracebachi@yahoo.com)
+Copyright (C) 2015  Trace Bachi (tracebachi@gmail.com)
 
 DeltaInventory is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

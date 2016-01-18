@@ -14,16 +14,16 @@
  * You should have received a copy of the GNU General Public License
  * along with DeltaInventory.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yahoo.tracebachi.DeltaInventory.Utils;
+package com.gmail.tracebachi.DeltaInventory.Utils;
 
-import com.yahoo.tracebachi.DeltaInventory.Storage.SavedInventory;
+import com.gmail.tracebachi.DeltaInventory.Storage.SavedInventory;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
+ * Created by Trace Bachi (tracebachi@gmail.com, BigBossZee) on 12/12/15.
  */
 public interface InventoryUtils
 {

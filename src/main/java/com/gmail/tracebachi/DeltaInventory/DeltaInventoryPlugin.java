@@ -14,17 +14,17 @@
  * You should have received a copy of the GNU General Public License
  * along with DeltaInventory.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yahoo.tracebachi.DeltaInventory;
+package com.gmail.tracebachi.DeltaInventory;
 
+import com.gmail.tracebachi.DeltaInventory.Listeners.InventoryLockListener;
+import com.gmail.tracebachi.DeltaInventory.Listeners.PlayerListener;
 import com.yahoo.tracebachi.DeltaEssentials.DeltaEssentialsPlugin;
-import com.yahoo.tracebachi.DeltaInventory.Listeners.InventoryLockListener;
-import com.yahoo.tracebachi.DeltaInventory.Listeners.PlayerListener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 
 /**
- * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/11/15.
+ * Created by Trace Bachi (tracebachi@gmail.com, BigBossZee) on 12/11/15.
  */
 public class DeltaInventoryPlugin extends JavaPlugin
 {

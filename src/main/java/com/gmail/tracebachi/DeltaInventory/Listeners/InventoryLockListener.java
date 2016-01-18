@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with DeltaInventory.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yahoo.tracebachi.DeltaInventory.Listeners;
+package com.gmail.tracebachi.DeltaInventory.Listeners;
 
 import com.yahoo.tracebachi.DeltaRedis.Spigot.Prefixes;
 import org.bukkit.entity.Player;
@@ -30,7 +30,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import java.util.HashSet;
 
 /**
- * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
+ * Created by Trace Bachi (tracebachi@gmail.com, BigBossZee) on 12/12/15.
  */
 public class InventoryLockListener implements Listener
 {

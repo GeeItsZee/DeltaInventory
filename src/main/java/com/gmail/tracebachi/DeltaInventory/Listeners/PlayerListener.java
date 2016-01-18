@@ -14,20 +14,20 @@
  * You should have received a copy of the GNU General Public License
  * along with DeltaInventory.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yahoo.tracebachi.DeltaInventory.Listeners;
+package com.gmail.tracebachi.DeltaInventory.Listeners;
 
+import com.gmail.tracebachi.DeltaInventory.Events.PlayerPreSaveEvent;
+import com.gmail.tracebachi.DeltaInventory.Runnables.PlayerLoad;
+import com.gmail.tracebachi.DeltaInventory.Runnables.PlayerSave;
+import com.gmail.tracebachi.DeltaInventory.Storage.IPlayerEntry;
+import com.gmail.tracebachi.DeltaInventory.Storage.InventoryPair;
+import com.gmail.tracebachi.DeltaInventory.Storage.PlayerEntry;
+import com.gmail.tracebachi.DeltaInventory.Storage.SavedInventory;
 import com.yahoo.tracebachi.DeltaEssentials.DeltaEssentialsPlugin;
 import com.yahoo.tracebachi.DeltaEssentials.Events.PlayerServerSwitchEvent;
-import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
-import com.yahoo.tracebachi.DeltaInventory.Events.PlayerLoadedEvent;
-import com.yahoo.tracebachi.DeltaInventory.Events.PlayerPreSaveEvent;
-import com.yahoo.tracebachi.DeltaInventory.Events.PlayerSavedEvent;
-import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerLoad;
-import com.yahoo.tracebachi.DeltaInventory.Runnables.PlayerSave;
-import com.yahoo.tracebachi.DeltaInventory.Storage.IPlayerEntry;
-import com.yahoo.tracebachi.DeltaInventory.Storage.InventoryPair;
-import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
-import com.yahoo.tracebachi.DeltaInventory.Storage.SavedInventory;
+import com.gmail.tracebachi.DeltaInventory.DeltaInventoryPlugin;
+import com.gmail.tracebachi.DeltaInventory.Events.PlayerLoadedEvent;
+import com.gmail.tracebachi.DeltaInventory.Events.PlayerSavedEvent;
 import de.luricos.bukkit.xAuth.event.command.player.xAuthCommandLoginEvent;
 import de.luricos.bukkit.xAuth.event.command.player.xAuthCommandRegisterEvent;
 import de.luricos.bukkit.xAuth.event.player.xAuthPlayerJoinEvent;
@@ -53,7 +53,7 @@ import static com.yahoo.tracebachi.DeltaRedis.Spigot.Prefixes.FAILURE;
 import static com.yahoo.tracebachi.DeltaRedis.Spigot.Prefixes.input;
 
 /**
- * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
+ * Created by Trace Bachi (tracebachi@gmail.com, BigBossZee) on 12/12/15.
  */
 public class PlayerListener implements Listener
 {

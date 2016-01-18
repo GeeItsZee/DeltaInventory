@@ -14,36 +14,33 @@
  * You should have received a copy of the GNU General Public License
  * along with DeltaInventory.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.yahoo.tracebachi.DeltaInventory.Storage;
-
-import org.bukkit.GameMode;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.potion.PotionEffect;
-
-import java.util.Collection;
+package com.gmail.tracebachi.DeltaInventory.Storage;
 
 /**
- * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
+ * Created by Trace Bachi (tracebachi@gmail.com, BigBossZee) on 12/12/15.
  */
-public interface IPlayerEntry
+public class InventoryPair
 {
-    String getName();
+    private SavedInventory survival;
+    private SavedInventory creative;
 
-    double getHealth();
+    public SavedInventory getSurvival()
+    {
+        return (survival != null) ? survival : SavedInventory.EMPTY;
+    }
 
-    int getFoodLevel();
+    public void setSurvival(SavedInventory survival)
+    {
+        this.survival = survival;
+    }
 
-    int getXpLevel();
+    public SavedInventory getCreative()
+    {
+        return (creative != null) ? creative : SavedInventory.EMPTY;
+    }
 
-    double getXpProgress();
-
-    GameMode getGameMode();
-
-    Collection<PotionEffect> getPotionEffects();
-
-    SavedInventory getSurvival();
-
-    SavedInventory getCreative();
-
-    ItemStack[] getEnderChest();
+    public void setCreative(SavedInventory creative)
+    {
+        this.creative = creative;
+    }
 }
