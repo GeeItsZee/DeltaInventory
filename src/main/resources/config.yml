@@ -1,7 +1,8 @@
 # DeltaInventory Configuration File
 
-# DeltaEssentials Database name
-Database: Main
+# File path to the player data folder
+# If the path is ' ', the plugin's data folder (.../plugins/DeltaInventory/PlayerData/) will be used
+PlayerDataFolder: ' '
 
 # Players are not allowed to switch to these gamemodes unless they have the bypass permission.
 # Options: SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR
@@ -19,4 +20,4 @@ ForcedGameMode: NONE
 ClearEffectsOnLogin: False
 
 # Debug Mode (for developers)
-DebugMode: False
+DebugMode: True

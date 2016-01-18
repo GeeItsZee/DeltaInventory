@@ -16,93 +16,33 @@
  */
 package com.yahoo.tracebachi.DeltaInventory.Utils;
 
-import com.google.common.base.Preconditions;
-import com.yahoo.tracebachi.DeltaInventory.Storage.IPlayerEntry;
-import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Storage.SavedInventory;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
 public interface InventoryUtils
 {
-    static byte[] serialize(IPlayerEntry entry) throws
-        IOException, NullPointerException
+    static YamlConfiguration toYamlSection(ItemStack[] itemStacks)
     {
-        Preconditions.checkNotNull(entry, "Entry cannot be null.");
-
         YamlConfiguration configuration = new YamlConfiguration();
-        SavedInventory playerInv;
 
-        // Save survival inventory + armor
-        playerInv = entry.getSurvival();
-        writeItemStacks(configuration, "Survival.Armor", playerInv.getArmor());
-        writeItemStacks(configuration, "Survival.Inv", playerInv.getContents());
-
-        // Save creative inventory + armor
-        playerInv = entry.getCreative();
-        writeItemStacks(configuration, "Creative.Armor", playerInv.getArmor());
-        writeItemStacks(configuration, "Creative.Inv", playerInv.getContents());
-
-        // Save ender chest
-        writeItemStacks(configuration, "EnderChest", entry.getEnderChest());
-
-        byte[] decompressed = configuration.saveToString().getBytes(StandardCharsets.UTF_8);
-        return CompressionUtils.compress(decompressed);
-    }
-
-    static void deserialize(byte[] compressed, PlayerEntry entry) throws
-        IOException, InvalidConfigurationException
-    {
-        Preconditions.checkNotNull(compressed, "Bytes cannot be null.");
-        Preconditions.checkNotNull(entry, "Entry cannot be null.");
-
-        ConfigurationSection section;
-        YamlConfiguration configuration = new YamlConfiguration();
-        byte[] decompressed = CompressionUtils.decompress(compressed);
-        configuration.loadFromString(new String(decompressed, StandardCharsets.UTF_8));
-
-        section = configuration.getConfigurationSection("Survival");
-        entry.setSurvival(readSavedInventory(section));
-
-        section = configuration.getConfigurationSection("Creative");
-        entry.setCreative(readSavedInventory(section));
-
-        section = configuration.getConfigurationSection("EnderChest");
-        entry.setEnderChest(readItemStacks(section, 27));
-    }
-
-    static SavedInventory readSavedInventory(ConfigurationSection section)
-    {
-        if(section != null)
-        {
-            ItemStack[] armor = readItemStacks(section.getConfigurationSection("Armor"), 4);
-            ItemStack[] inventory = readItemStacks(section.getConfigurationSection("Inv"), 36);
-            return new SavedInventory(armor, inventory);
-        }
-        return SavedInventory.EMPTY;
-    }
-
-    static void writeItemStacks(YamlConfiguration configuration, String prefix, ItemStack[] itemStacks)
-    {
         for(int i = 0; i < itemStacks.length; ++i)
         {
             if(itemStacks[i] != null && itemStacks[i].getType() != Material.AIR)
             {
-                configuration.set(prefix + "." + i, itemStacks[i]);
+                configuration.set(Integer.toString(i), itemStacks[i]);
             }
         }
+
+        return configuration;
     }
 
-    static ItemStack[] readItemStacks(ConfigurationSection section, int maxSize)
+    static ItemStack[] toItemStacks(ConfigurationSection section, int maxSize)
     {
         ItemStack[] destination = new ItemStack[maxSize];
 
@@ -121,6 +61,18 @@ public interface InventoryUtils
                 }
             }
         }
+
         return destination;
+    }
+
+    static SavedInventory toSavedInventory(ConfigurationSection section)
+    {
+        if(section != null)
+        {
+            ItemStack[] armor = toItemStacks(section.getConfigurationSection("Armor"), 4);
+            ItemStack[] inventory = toItemStacks(section.getConfigurationSection("Contents"), 36);
+            return new SavedInventory(armor, inventory);
+        }
+        return SavedInventory.EMPTY;
     }
 }

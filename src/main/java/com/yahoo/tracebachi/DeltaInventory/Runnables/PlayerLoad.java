@@ -21,45 +21,45 @@ import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
 import com.yahoo.tracebachi.DeltaInventory.Listeners.PlayerListener;
 import com.yahoo.tracebachi.DeltaInventory.Storage.IPlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
+import com.yahoo.tracebachi.DeltaInventory.Storage.SavedInventory;
 import com.yahoo.tracebachi.DeltaInventory.Utils.InventoryUtils;
+import com.yahoo.tracebachi.DeltaInventory.Utils.PotionEffectUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
 
+import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.List;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
 public class PlayerLoad implements Runnable
 {
-    private static final String SELECT_BY_NAME =
-        " SELECT id, name, health, hunger, xp_level, xp_progress, gamemode, effects, items" +
-        " FROM deltainventory" +
-        " WHERE name = ?" +
-        " LIMIT 1;";
-    private static final String SELECT_BY_ID =
-        " SELECT id, name, health, hunger, xp_level, xp_progress, gamemode, effects, items" +
-        " FROM deltainventory" +
-        " WHERE id = ?" +
-        " LIMIT 1;";
-
     private final boolean isRunningSync;
     private final String name;
-    private final Integer id;
+    private final String playerDataFolder;
     private final PlayerListener listener;
     private final DeltaInventoryPlugin plugin;
 
-    public PlayerLoad(String name, Integer id, PlayerListener listener, DeltaInventoryPlugin plugin)
+    public PlayerLoad(String name, PlayerListener listener, DeltaInventoryPlugin plugin)
     {
-        this(name, id, listener, plugin, false);
+        this(name, listener, plugin, false);
     }
 
-    public PlayerLoad(String name, Integer id, PlayerListener listener, DeltaInventoryPlugin plugin,
+    public PlayerLoad(String name, PlayerListener listener, DeltaInventoryPlugin plugin,
         boolean isRunningSync)
     {
         Preconditions.checkNotNull(name, "Name cannot be null.");
@@ -67,7 +67,7 @@ public class PlayerLoad implements Runnable
         Preconditions.checkNotNull(plugin, "Plugin cannot be null.");
 
         this.name = name.toLowerCase();
-        this.id = id;
+        this.playerDataFolder = plugin.getPlayerDataFolder();
         this.listener = listener;
         this.plugin = plugin;
         this.isRunningSync = isRunningSync;
@@ -76,77 +76,74 @@ public class PlayerLoad implements Runnable
     @Override
     public void run()
     {
-        try(Connection connection = DeltaInventoryPlugin.dataSource.getConnection())
+        Path path = Paths.get(playerDataFolder + File.separator +
+            name.charAt(0) + File.separator + name + ".yml");
+
+        if(!path.toFile().exists())
         {
-            if(id == null)
-            {
-                try(PreparedStatement statement = connection.prepareStatement(SELECT_BY_NAME))
-                {
-                    statement.setString(1, name);
-                    try(ResultSet resultSet = statement.executeQuery())
-                    {
-                        if(resultSet.next())
-                        {
-                            IPlayerEntry entry = getEntryFromResultSet(resultSet);
-                            onSuccess(entry);
-                        }
-                        else
-                        {
-                            onNotFoundFailure();
-                        }
-                    }
-                }
-            }
-            else
-            {
-                try(PreparedStatement statement = connection.prepareStatement(SELECT_BY_ID))
-                {
-                    statement.setInt(1, id);
-                    try(ResultSet resultSet = statement.executeQuery())
-                    {
-                        if(resultSet.next())
-                        {
-                            IPlayerEntry entry = getEntryFromResultSet(resultSet);
-                            onSuccess(entry);
-                        }
-                        else
-                        {
-                            onNotFoundFailure();
-                        }
-                    }
-                }
-            }
+            onNotFoundFailure();
+            return;
         }
-        catch(SQLException | InvalidConfigurationException | IOException ex)
+
+        String fileContents = readFileWithLock(path);
+        if(fileContents == null)
         {
-            ex.printStackTrace();
+            onLoadFailure();
+            return;
+        }
+
+        IPlayerEntry entry;
+        YamlConfiguration configuration = new YamlConfiguration();
+        try
+        {
+            configuration.loadFromString(fileContents);
+            entry = readPlayerDataYaml(configuration);
+            onSuccess(entry);
+        }
+        catch(InvalidConfigurationException e)
+        {
+            e.printStackTrace();
             onLoadFailure();
         }
     }
 
-    private IPlayerEntry getEntryFromResultSet(ResultSet resultSet) throws
-        SQLException, InvalidConfigurationException, IOException
+    private IPlayerEntry readPlayerDataYaml(YamlConfiguration configuration)
     {
-        Integer id = resultSet.getInt("id");
-        String name = resultSet.getString("name");
-        PlayerEntry entry = new PlayerEntry(id, name);
+        ItemStack[] itemStacks;
+        ConfigurationSection section;
+        SavedInventory savedInventory;
+        List<PotionEffect> effects;
+        PlayerEntry entry = new PlayerEntry(name);
 
-        entry.setHealth(resultSet.getDouble("health"));
-        entry.setFoodLevel(resultSet.getInt("hunger"));
-        entry.setXpLevel(resultSet.getInt("xp_level"));
-        entry.setXpProgress(resultSet.getFloat("xp_progress"));
-        entry.setGameMode(GameMode.valueOf(resultSet.getString("gamemode")));
-        entry.setPotionEffects(resultSet.getString("effects"));
+        entry.setHealth(configuration.getDouble("Health", 20.0));
+        entry.setFoodLevel(configuration.getInt("Hunger", 20));
+        entry.setXpLevel(configuration.getInt("XpLevel", 0));
+        entry.setXpProgress(configuration.getDouble("XpProgress", 0.0));
+        entry.setGameMode(GameMode.valueOf(configuration.getString("Gamemode", "SURVIVAL")));
 
-        byte[] itemBytes = resultSet.getBytes("items");
-        InventoryUtils.deserialize(itemBytes, entry);
+        effects = PotionEffectUtils.toEffectList(configuration.getStringList("Effects"));
+        entry.setPotionEffects(effects);
+
+        section = configuration.getConfigurationSection("Survival");
+        savedInventory = InventoryUtils.toSavedInventory(section);
+        entry.setSurvival(savedInventory);
+
+        section = configuration.getConfigurationSection("Creative");
+        savedInventory = InventoryUtils.toSavedInventory(section);
+        entry.setCreative(savedInventory);
+
+        section = configuration.getConfigurationSection("EnderChest");
+        itemStacks = InventoryUtils.toItemStacks(section, 27);
+        entry.setEnderChest(itemStacks);
+
+        // TODO Meta section?
+
         return entry;
     }
 
     private void onSuccess(IPlayerEntry entry)
     {
-        plugin.debug("Loaded inventory for {name:" + entry.getName() +
-            ", id:" + entry.getId() + "}");
+        plugin.debug("Loaded inventory for {name:" + entry.getName() + "}");
 
         if(isRunningSync)
         {
@@ -187,5 +184,46 @@ public class PlayerLoad implements Runnable
             Bukkit.getScheduler().runTask(plugin,
                 () -> listener.onInventoryNotFound(name));
         }
+    }
+
+    private String readFileWithLock(Path path)
+    {
+        FileLock lock = null;
+
+        try
+        {
+            FileChannel fileChannel = FileChannel.open(path,
+                StandardOpenOption.READ, StandardOpenOption.WRITE);
+
+            // Lock the file
+            lock = fileChannel.lock();
+
+            ByteBuffer buffer = ByteBuffer.allocate((int) fileChannel.size());
+            fileChannel.read(buffer);
+
+            // Unlock the file
+            lock.release();
+
+            return new String(buffer.array(), StandardCharsets.UTF_16);
+        }
+        catch(IOException ex)
+        {
+            ex.printStackTrace();
+        }
+        finally
+        {
+            if(lock != null)
+            {
+                try
+                {
+                    lock.release();
+                }
+                catch(IOException ex)
+                {
+                    ex.printStackTrace();
+                }
+            }
+        }
+        return null;
     }
 }

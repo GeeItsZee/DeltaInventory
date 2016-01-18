@@ -28,7 +28,6 @@ import com.yahoo.tracebachi.DeltaInventory.Storage.IPlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Storage.InventoryPair;
 import com.yahoo.tracebachi.DeltaInventory.Storage.PlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Storage.SavedInventory;
-import com.yahoo.tracebachi.DeltaInventory.Utils.PotionEffectUtils;
 import de.luricos.bukkit.xAuth.event.command.player.xAuthCommandLoginEvent;
 import de.luricos.bukkit.xAuth.event.command.player.xAuthCommandRegisterEvent;
 import de.luricos.bukkit.xAuth.event.player.xAuthPlayerJoinEvent;
@@ -90,7 +89,6 @@ public class PlayerListener implements Listener
 
     private HashSet<String> authenticated = new HashSet<>(32);
     private HashSet<String> ignoreModeChangeOnce = new HashSet<>(32);
-    private HashMap<String, Integer> idMap = new HashMap<>(32);
     private HashMap<String, ServerChangeRequest> serverChangeRequests = new HashMap<>(32);
     private HashMap<String, InventoryPair> inventoryMap = new HashMap<>(32);
 
@@ -157,8 +155,6 @@ public class PlayerListener implements Listener
         this.inventoryMap = null;
         this.serverChangeRequests.clear();
         this.serverChangeRequests = null;
-        this.idMap.clear();
-        this.idMap = null;
         this.deltaEssPlugin = null;
         this.plugin = null;
     }
@@ -174,8 +170,7 @@ public class PlayerListener implements Listener
         Player player = Bukkit.getPlayer(entry.getName());
         String name = entry.getName();
 
-        // Save the ID and remove the lock
-        idMap.put(name, entry.getId());
+        // Remove the lock
         inventoryLockListener.removeLock(name);
 
         // If the player is online, apply the entry
@@ -243,9 +238,8 @@ public class PlayerListener implements Listener
      * to change servers, it will be completed in this method.
      *
      * @param name Name of the player whose inventory was saved
-     * @param id Integer id of the database row where the inventory is saved
      */
-    public void onInventorySaved(String name, Integer id)
+    public void onInventorySaved(String name)
     {
         Player player = Bukkit.getPlayer(name);
         ServerChangeRequest request = serverChangeRequests.remove(name);
@@ -253,8 +247,7 @@ public class PlayerListener implements Listener
         PlayerSavedEvent event = new PlayerSavedEvent(name, player);
         Bukkit.getPluginManager().callEvent(event);
 
-        // Save the ID and unlock
-        idMap.put(name, id);
+        // Remove the lock
         inventoryLockListener.removeLock(name);
 
         // If there is a server change request, send to server without DeltaEssentials event
@@ -312,8 +305,7 @@ public class PlayerListener implements Listener
                 authenticated.add(name);
 
                 // Schedule an inventory load
-                Integer id = idMap.get(name);
-                loadInventoryAsync(name, id);
+                loadInventoryAsync(name);
             }
         }
     }
@@ -339,8 +331,7 @@ public class PlayerListener implements Listener
                 authenticated.add(name);
 
                 // Schedule an inventory load
-                Integer id = idMap.get(name);
-                loadInventoryAsync(name, id);
+                loadInventoryAsync(name);
             }
         }
     }
@@ -371,8 +362,7 @@ public class PlayerListener implements Listener
                 authenticated.add(name);
 
                 // Schedule an inventory load
-                Integer id = idMap.get(name);
-                loadInventoryAsync(name, id);
+                loadInventoryAsync(name);
             }
         }
     }
@@ -531,11 +521,11 @@ public class PlayerListener implements Listener
         }
     }
 
-    private void loadInventoryAsync(String name, Integer id)
+    private void loadInventoryAsync(String name)
     {
-        PlayerLoad runnable = new PlayerLoad(name, id, this, plugin);
+        PlayerLoad runnable = new PlayerLoad(name, this, plugin);
 
-        plugin.debug("Loading inventory async for {name:" + name + ", id:" + id + "}" );
+        plugin.debug("Loading inventory async for {name:" + name + "}" );
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, runnable);
     }
 
@@ -551,8 +541,7 @@ public class PlayerListener implements Listener
 
         // Create a runnable and schedule it
         PlayerSave runnable = new PlayerSave(entry, this, plugin);
-        plugin.debug("Saving inventory async for {name:" + entry.getName() +
-            ", id:" + entry.getId() + "}" );
+        plugin.debug("Saving inventory async for {name:" + entry.getName() + "}" );
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, runnable);
     }
 
@@ -568,16 +557,14 @@ public class PlayerListener implements Listener
 
         // Create a runnable and schedule it
         PlayerSave runnable = new PlayerSave(entry, this, plugin, true);
-        plugin.debug("Saving inventory sync for {name:" + entry.getName() +
-            ", id:" + entry.getId() + "}" );
+        plugin.debug("Saving inventory sync for {name:" + entry.getName() + "}" );
         runnable.run();
     }
 
     private IPlayerEntry createPlayerEntry(Player player)
     {
         String name = player.getName().toLowerCase();
-        Integer id = idMap.get(name);
-        PlayerEntry entry = new PlayerEntry(id, name);
+        PlayerEntry entry = new PlayerEntry(name);
         SavedInventory inventory = new SavedInventory(player);
         InventoryPair pair = inventoryMap.get(name);
 
@@ -585,7 +572,7 @@ public class PlayerListener implements Listener
         entry.setFoodLevel(player.getFoodLevel());
         entry.setXpLevel(player.getLevel());
         entry.setXpProgress(player.getExp());
-        entry.setPotionEffects(PotionEffectUtils.serialize(player.getActivePotionEffects()));
+        entry.setPotionEffects(player.getActivePotionEffects());
         entry.setEnderChest(player.getEnderChest().getContents());
 
         if(player.hasPermission("DeltaInv.SingleInv"))
@@ -635,7 +622,7 @@ public class PlayerListener implements Listener
         player.setHealth(entry.getHealth());
         player.setFoodLevel(entry.getFoodLevel());
         player.setLevel(entry.getXpLevel());
-        player.setExp(entry.getXpProgress());
+        player.setExp((float) entry.getXpProgress());
         player.getEnderChest().setContents(entry.getEnderChest());
 
         for(PotionEffect effect : player.getActivePotionEffects())
@@ -645,7 +632,7 @@ public class PlayerListener implements Listener
 
         if(!clearEffectsOnLogin)
         {
-            for(PotionEffect effect : PotionEffectUtils.deserialize(entry.getPotionEffects()))
+            for(PotionEffect effect : entry.getPotionEffects())
             {
                 effect.apply(player);
             }

@@ -19,36 +19,17 @@ package com.yahoo.tracebachi.DeltaInventory;
 import com.yahoo.tracebachi.DeltaEssentials.DeltaEssentialsPlugin;
 import com.yahoo.tracebachi.DeltaInventory.Listeners.InventoryLockListener;
 import com.yahoo.tracebachi.DeltaInventory.Listeners.PlayerListener;
-import com.zaxxer.hikari.HikariDataSource;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.io.File;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/11/15.
  */
 public class DeltaInventoryPlugin extends JavaPlugin
 {
-    public static HikariDataSource dataSource;
-
-    private static final String CREATE_TABLE_STATEMENT =
-        " CREATE TABLE IF NOT EXISTS deltainventory (" +
-        " id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY," +
-        " name CHAR(32) NOT NULL UNIQUE KEY," +
-        " health DOUBLE NOT NULL," +
-        " hunger INT NOT NULL," +
-        " xp_level INT NOT NULL," +
-        " xp_progress FLOAT NOT NULL," +
-        " gamemode CHAR(10) NOT NULL," +
-        " effects VARCHAR(256) NOT NULL," +
-        " lastupdate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP," +
-        " items BLOB" +
-        " )";
-
     private boolean debugMode;
-    private String databaseName;
+    private String playerDataFolder;
     private PlayerListener playerListener;
     private InventoryLockListener inventoryLockListener;
 
@@ -63,25 +44,24 @@ public class DeltaInventoryPlugin extends JavaPlugin
     {
         reloadConfig();
         debugMode = getConfig().getBoolean("DebugMode", false);
-        databaseName = getConfig().getString("Database");
+        playerDataFolder = getConfig().getString("PlayerDataFolder");
+
+        if(playerDataFolder == null || playerDataFolder.trim().equals(""))
+        {
+            playerDataFolder = getDataFolder() + File.separator +
+                "PlayerData" + File.separator;
+        }
+
+        File file = new File(playerDataFolder);
+        if(!file.exists() && !file.mkdirs())
+        {
+            severe("Failed to create neccesary directories! Shutting down ...");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
 
         DeltaEssentialsPlugin dePlugin = (DeltaEssentialsPlugin) getServer()
             .getPluginManager().getPlugin("DeltaEssentials");
-
-        dataSource = dePlugin.getDataSource(databaseName);
-        if(dataSource == null)
-        {
-            severe("The specified database does not exist! Shutting down ...");
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
-
-        if(!setupTable())
-        {
-            severe("Failed to create inventory table! Shutting down ...");
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
 
         inventoryLockListener = new InventoryLockListener();
         getServer().getPluginManager().registerEvents(inventoryLockListener, this);
@@ -103,13 +83,11 @@ public class DeltaInventoryPlugin extends JavaPlugin
             inventoryLockListener.shutdown();
             inventoryLockListener = null;
         }
-
-        dataSource = null;
     }
 
-    public String getDatabaseName()
+    public String getPlayerDataFolder()
     {
-        return databaseName;
+        return playerDataFolder;
     }
 
     public void info(String message)
@@ -127,25 +105,6 @@ public class DeltaInventoryPlugin extends JavaPlugin
         if(debugMode)
         {
             getLogger().info("[Debug] " + message);
-        }
-    }
-
-    private boolean setupTable()
-    {
-        try(Connection connection = dataSource.getConnection())
-        {
-            try(Statement statement = connection.createStatement())
-            {
-                info("Creating `deltainventory` table ...");
-                statement.executeUpdate(CREATE_TABLE_STATEMENT);
-                info("Creating `deltainventory` table ... Done");
-                return true;
-            }
-        }
-        catch(SQLException ex)
-        {
-            ex.printStackTrace();
-            return false;
         }
     }
 }

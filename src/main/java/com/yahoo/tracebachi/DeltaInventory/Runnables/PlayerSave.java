@@ -21,38 +21,26 @@ import com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin;
 import com.yahoo.tracebachi.DeltaInventory.Listeners.PlayerListener;
 import com.yahoo.tracebachi.DeltaInventory.Storage.IPlayerEntry;
 import com.yahoo.tracebachi.DeltaInventory.Utils.InventoryUtils;
+import com.yahoo.tracebachi.DeltaInventory.Utils.PotionEffectUtils;
+import org.bukkit.configuration.file.YamlConfiguration;
 
+import java.io.File;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
 public class PlayerSave implements Runnable
 {
-    private static final String SELECT_PLAYER =
-        " SELECT id FROM deltainventory" +
-        " WHERE name = ?" +
-        " LIMIT 1;";
-    private static final String UPDATE_PLAYER =
-        " UPDATE deltainventory SET" +
-        " health = ?," +
-        " hunger = ?," +
-        " xp_level = ?," +
-        " xp_progress = ?," +
-        " gamemode = ?," +
-        " effects = ?," +
-        " items = ?" +
-        " WHERE id = ?;";
-    private static final String INSERT_PLAYER =
-        " INSERT INTO deltainventory" +
-        " (name, health, hunger, xp_level, xp_progress, gamemode, effects, items)" +
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?);";
-
     private final boolean isRunningSync;
+    private final String playerDataFolder;
     private final IPlayerEntry entry;
     private final PlayerListener listener;
     private final DeltaInventoryPlugin plugin;
@@ -64,10 +52,12 @@ public class PlayerSave implements Runnable
 
     public PlayerSave(IPlayerEntry entry, PlayerListener listener, DeltaInventoryPlugin plugin, boolean isRunningSync)
     {
-        Preconditions.checkNotNull(plugin, "Plugin cannot be null.");
         Preconditions.checkNotNull(entry, "Entry cannot be null.");
+        Preconditions.checkNotNull(listener, "Listener cannot be null.");
+        Preconditions.checkNotNull(plugin, "Plugin cannot be null.");
 
         this.entry = entry;
+        this.playerDataFolder = plugin.getPlayerDataFolder();
         this.listener = listener;
         this.plugin = plugin;
         this.isRunningSync = isRunningSync;
@@ -76,132 +66,76 @@ public class PlayerSave implements Runnable
     @Override
     public void run()
     {
-        try(Connection connection = DeltaInventoryPlugin.dataSource.getConnection())
+        try
         {
-            Integer foundId = entry.getId();
-            boolean success;
+            YamlConfiguration configuration = writePlayerDataYaml();
+            String source = configuration.saveToString();
 
-            if(foundId != null)
+            Path path = Paths.get(playerDataFolder + File.separator +
+                entry.getName().charAt(0) + File.separator + entry.getName() + ".yml");
+
+            if(writeFileWithLock(source, path))
             {
-                // If the ID is known, use an UPDATE
-                success = updatePlayer(foundId, connection);
+                onSuccess();
             }
             else
             {
-                // To find the ID, use a SELECT
-                foundId = selectPlayer(connection);
-
-                if(foundId != null)
-                {
-                    // Since ID was found, use an UPDATE
-                    success = updatePlayer(foundId, connection);
-                }
-                else
-                {
-                    // Since ID was not found, use an INSERT
-                    foundId = insertPlayer(connection);
-                    success = (foundId != null);
-                }
+                onFailure();
             }
-
-            // Handle the result of the save run
-            if(success) onSuccess(foundId);
-            else onFailure();
         }
-        catch(SQLException | IOException | NullPointerException ex)
+        catch(NullPointerException e)
         {
-            ex.printStackTrace();
+            e.printStackTrace();
             onFailure();
         }
     }
 
-    private Integer selectPlayer(Connection connection) throws SQLException
+    private YamlConfiguration writePlayerDataYaml()
     {
-        try(PreparedStatement statement = connection.prepareStatement(SELECT_PLAYER))
-        {
-            statement.setString(1, entry.getName());
-            try(ResultSet resultSet = statement.executeQuery())
-            {
-                if(resultSet.next())
-                {
-                    return resultSet.getInt("id");
-                }
-                return null;
-            }
-        }
+        YamlConfiguration serialized;
+        YamlConfiguration configuration = new YamlConfiguration();
+
+        configuration.set("LastSave", System.currentTimeMillis());
+
+        configuration.set("Health", entry.getHealth());
+        configuration.set("Hunger", entry.getFoodLevel());
+        configuration.set("XpLevel", entry.getXpLevel());
+        configuration.set("XpProgress", entry.getXpProgress());
+        configuration.set("Gamemode", entry.getGameMode().toString());
+        configuration.set("Effects", PotionEffectUtils.toStringList(entry.getPotionEffects()));
+
+        serialized = InventoryUtils.toYamlSection(entry.getSurvival().getArmor());
+        configuration.set("Survival.Armor", serialized);
+
+        serialized = InventoryUtils.toYamlSection(entry.getSurvival().getContents());
+        configuration.set("Survival.Contents", serialized);
+
+        serialized = InventoryUtils.toYamlSection(entry.getCreative().getArmor());
+        configuration.set("Creative.Armor", serialized);
+
+        serialized = InventoryUtils.toYamlSection(entry.getCreative().getArmor());
+        configuration.set("Creative.Armor", serialized);
+
+        serialized = InventoryUtils.toYamlSection(entry.getEnderChest());
+        configuration.set("EnderChest", serialized);
+
+        // TODO Meta section?
+
+        return configuration;
     }
 
-    private boolean updatePlayer(Integer foundId, Connection connection) throws
-        SQLException, IOException, NullPointerException
+    private void onSuccess()
     {
-        try(PreparedStatement statement = connection.prepareStatement(UPDATE_PLAYER))
-        {
-            byte[] serializedInv = InventoryUtils.serialize(entry);
-
-            statement.setDouble(1, entry.getHealth());
-            statement.setInt(2, entry.getFoodLevel());
-            statement.setInt(3, entry.getXpLevel());
-            statement.setFloat(4, entry.getXpProgress());
-            statement.setString(5, entry.getGameMode().toString());
-            statement.setString(6, entry.getPotionEffects());
-            statement.setBytes(7, serializedInv);
-
-            if(entry.getId() != null)
-            {
-                statement.setInt(8, entry.getId());
-            }
-            else
-            {
-                statement.setInt(8, foundId);
-            }
-
-            return (statement.executeUpdate() != 0);
-        }
-    }
-
-    private Integer insertPlayer(Connection connection) throws
-        SQLException, IOException, NullPointerException
-    {
-        try(PreparedStatement statement = connection.prepareStatement(INSERT_PLAYER,
-            PreparedStatement.RETURN_GENERATED_KEYS))
-        {
-            byte[] serializedInv = InventoryUtils.serialize(entry);
-
-            statement.setString(1, entry.getName());
-            statement.setDouble(2, entry.getHealth());
-            statement.setInt(3, entry.getFoodLevel());
-            statement.setInt(4, entry.getXpLevel());
-            statement.setFloat(5, entry.getXpProgress());
-            statement.setString(6, entry.getGameMode().toString());
-            statement.setString(7, entry.getPotionEffects());
-            statement.setBytes(8, serializedInv);
-
-            statement.executeUpdate();
-
-            try(ResultSet keySet = statement.getGeneratedKeys())
-            {
-                if(keySet.next())
-                {
-                    return keySet.getInt(1);
-                }
-                return null;
-            }
-        }
-    }
-
-    private void onSuccess(Integer foundId)
-    {
-        plugin.debug("Saved inventory for {name:" + entry.getName() + ", id:" + foundId + "}");
+        plugin.debug("Saved inventory for {name:" + entry.getName() + "}");
 
         if(isRunningSync)
         {
-            listener.onInventorySaved(entry.getName(), foundId);
+            listener.onInventorySaved(entry.getName());
         }
         else
         {
-            final Integer finalFoundId = foundId;
             plugin.getServer().getScheduler().runTask(plugin,
-                () -> listener.onInventorySaved(entry.getName(), finalFoundId));
+                () -> listener.onInventorySaved(entry.getName()));
         }
     }
 
@@ -218,5 +152,58 @@ public class PlayerSave implements Runnable
             plugin.getServer().getScheduler().runTask(plugin,
                 () -> listener.onInventorySaveFailure(entry.getName()));
         }
+    }
+
+    private boolean writeFileWithLock(String source, Path path)
+    {
+        FileLock lock = null;
+
+        try
+        {
+            File file = path.toFile();
+            File directory = file.getParentFile();
+
+            if(!directory.exists() && !directory.mkdirs())
+            {
+                return false;
+            }
+
+            if(!file.exists() && !file.createNewFile())
+            {
+                return false;
+            }
+
+            FileChannel fileChannel = FileChannel.open(path,
+                StandardOpenOption.READ, StandardOpenOption.WRITE);
+
+            // Lock the file
+            lock = fileChannel.lock();
+
+            ByteBuffer buffer = ByteBuffer.wrap(source.getBytes(StandardCharsets.UTF_16));
+            fileChannel.write(buffer);
+
+            // Unlock the file
+            lock.release();
+            return true;
+        }
+        catch(IOException ex)
+        {
+            ex.printStackTrace();
+        }
+        finally
+        {
+            if(lock != null)
+            {
+                try
+                {
+                    lock.release();
+                }
+                catch(IOException ex)
+                {
+                    ex.printStackTrace();
+                }
+            }
+        }
+        return false;
     }
 }

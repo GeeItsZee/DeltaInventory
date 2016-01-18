@@ -19,35 +19,31 @@ package com.yahoo.tracebachi.DeltaInventory.Storage;
 import com.google.common.base.Preconditions;
 import org.bukkit.GameMode;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+
+import java.util.Collection;
+import java.util.Collections;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
 public class PlayerEntry implements IPlayerEntry
 {
-    private final Integer id;
     private final String name;
     private double health;
     private int foodLevel;
     private int xpLevel;
-    private float xpProgress;
+    private double xpProgress;
     private GameMode gameMode;
-    private String potionEffects;
+    private Collection<PotionEffect> potionEffects;
     private SavedInventory survival;
     private SavedInventory creative;
     private ItemStack[] enderChest;
 
-    public PlayerEntry(Integer id, String name)
+    public PlayerEntry(String name)
     {
         Preconditions.checkNotNull(name, "Name cannot be null.");
-        this.id = id;
         this.name = name;
-    }
-
-    @Override
-    public Integer getId()
-    {
-        return id;
     }
 
     @Override
@@ -90,12 +86,12 @@ public class PlayerEntry implements IPlayerEntry
     }
 
     @Override
-    public float getXpProgress()
+    public double getXpProgress()
     {
         return xpProgress;
     }
 
-    public void setXpProgress(float xpProgress)
+    public void setXpProgress(double xpProgress)
     {
         this.xpProgress = xpProgress;
     }
@@ -111,12 +107,13 @@ public class PlayerEntry implements IPlayerEntry
         this.gameMode = gameMode;
     }
 
-    public String getPotionEffects()
+    @Override
+    public Collection<PotionEffect> getPotionEffects()
     {
-        return potionEffects;
+        return (potionEffects == null) ? Collections.emptyList() : potionEffects;
     }
 
-    public void setPotionEffects(String potionEffects)
+    public void setPotionEffects(Collection<PotionEffect> potionEffects)
     {
         this.potionEffects = potionEffects;
     }

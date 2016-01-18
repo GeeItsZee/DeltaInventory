@@ -1,3 +1,19 @@
+/*
+ * This file is part of DeltaInventory.
+ *
+ * DeltaInventory is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * DeltaInventory is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with DeltaInventory.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package com.yahoo.tracebachi.DeltaInventory.Utils;
 
 import org.bukkit.potion.PotionEffect;
@@ -13,32 +29,29 @@ import java.util.regex.Pattern;
  */
 public interface PotionEffectUtils
 {
-    Pattern semiColonPattern = Pattern.compile(";");
     Pattern commaPattern = Pattern.compile(",");
 
-    static String serialize(Collection<PotionEffect> effects)
+    static List<String> toStringList(Collection<PotionEffect> effects)
     {
-        StringBuilder builder = new StringBuilder("");
+        List<String> result = new ArrayList<>(effects.size());
 
         for(PotionEffect effect : effects)
         {
-            builder.append(serializePotionEffect(effect));
-            builder.append(";");
+            result.add(serialize(effect));
         }
 
-        return builder.toString();
+        return result;
     }
 
-    static List<PotionEffect> deserialize(String source)
+    static List<PotionEffect> toEffectList(Collection<String> serialized)
     {
-        String[] split = semiColonPattern.split(source);
-        List<PotionEffect> effects = new ArrayList<>(split.length);
+        List<PotionEffect> effects = new ArrayList<>(serialized.size());
 
-        for(String splitSource : split)
+        for(String effectString : serialized)
         {
             try
             {
-                PotionEffect effect = deserializePotionEffect(splitSource);
+                PotionEffect effect = deserialize(effectString);
                 effects.add(effect);
             }
             catch(NumberFormatException | ArrayIndexOutOfBoundsException ignored) {}
@@ -47,18 +60,17 @@ public interface PotionEffectUtils
         return effects;
     }
 
-    static String serializePotionEffect(PotionEffect effect)
+    static String serialize(PotionEffect effect)
     {
-        return effect.getType().getId() + "," + effect.getAmplifier() + "," + effect.getDuration();
+        return effect.getType().getName() + "," + effect.getAmplifier() + "," + effect.getDuration();
     }
 
-    static PotionEffect deserializePotionEffect(String source)
+    static PotionEffect deserialize(String source)
     {
         String split[] = commaPattern.split(source, 3);
-        int id = Integer.parseInt(split[0]);
         int amplifier = Integer.parseInt(split[1]);
         int duration = Integer.parseInt(split[2]);
 
-        return new PotionEffect(PotionEffectType.getById(id), duration, amplifier);
+        return new PotionEffect(PotionEffectType.getByName(split[0]), duration, amplifier);
     }
 }

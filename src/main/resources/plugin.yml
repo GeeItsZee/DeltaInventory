@@ -1,6 +1,6 @@
 name: DeltaInventory
 main: com.yahoo.tracebachi.DeltaInventory.DeltaInventoryPlugin
-version: 1.2
+version: 1.3
 author: Trace Bachi (tracebachi@yahoo.com, BigBossZee)
 depend: [xAuth, DeltaRedis, DeltaEssentials]
 # Add all minigames on your server to this list to help
@@ -10,5 +10,5 @@ loadbefore: [MobArena, FloorIsLava]
 permissions:
   DeltaInv.SingleInv:
     description: Maintains a single inventory for all gamemodes.
-  DeltaInv.ForcedGameMode.Bypass:
+  DeltaInv.Forced.Bypass:
     description: Allows player to bypass forced gamemode restriction.

@@ -18,14 +18,15 @@ package com.yahoo.tracebachi.DeltaInventory.Storage;
 
 import org.bukkit.GameMode;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffect;
+
+import java.util.Collection;
 
 /**
  * Created by Trace Bachi (tracebachi@yahoo.com, BigBossZee) on 12/12/15.
  */
 public interface IPlayerEntry
 {
-    Integer getId();
-
     String getName();
 
     double getHealth();
@@ -34,11 +35,11 @@ public interface IPlayerEntry
 
     int getXpLevel();
 
-    float getXpProgress();
+    double getXpProgress();
 
     GameMode getGameMode();
 
-    String getPotionEffects();
+    Collection<PotionEffect> getPotionEffects();
 
     SavedInventory getSurvival();
 
